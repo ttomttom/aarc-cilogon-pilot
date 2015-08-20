@@ -1,0 +1,136 @@
+#!/bin/bash
+
+set -x
+
+JAVA_HOME="/usr/java/default"
+CATALINA_HOME="/usr/share/tomcat"
+
+TOMCAT_CONF="/etc/tomcat/tomcat.conf"
+TOMCAT_CONF_DIR="${CATALINA_HOME}/conf"
+
+SHIB_FILE="shibboleth-identity-provider-3.1.2.tar.gz"
+SHIB_DIR="shibboleth-identity-provider"
+SHIB_INSTALL_DIR="/opt/shibboleth-idp"
+SHIB_INSTALL_PROPERTIES="`pwd`/shib.properties"
+
+######################################################################################
+# General config and utils                                                           #
+######################################################################################
+
+yum -y install epel-release
+yum -y install xmlstarlet wget
+
+# includes /usr/sbin in non-login shells
+echo '. /etc/profile' >> /home/jenkins/.bashrc
+
+# make sure domainname is set
+domainname demo
+hostname `hostname -s`.demo
+
+
+######################################################################################
+# Dependencies    (tomcat + java8)                                                   #
+######################################################################################
+
+
+# installing java 8
+wget -q --no-cookies --no-check-certificate \
+	--header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F;   \
+        oraclelicense=accept-securebackup-cookie" \
+        "http://download.oracle.com/otn-pub/java/jdk/8u45-b14/jdk-8u45-linux-x64.rpm"
+rpm -iv jdk-8u45-linux-x64.rpm
+echo "export JAVA_HOME=${JAVA_HOME}" >> /etc/bashrc
+echo 'export PATH=${JAVA_HOME}/bin:${PATH}' >> /etc/bashrc
+
+# installing tomcat
+yum -y install tomcat
+rm -rf ${CATALINA_HOME}/webapps/*
+echo "export CATALINA_HOME=${CATALINA_HOME}" >> /etc/bashrc
+
+# make sure this install script will have all the right env variables
+source /etc/bashrc
+
+# install tomcat-jsvc and tweak tomcat so it can open ports < 1024 
+# this is required by the shibboleth-idp (port 443)
+yum -y install tomcat-jsvc
+sed -i 's/^User=.*/#\&/'   /usr/lib/systemd/system/tomcat.service
+sed -i 's/^Group=.*/#\&/'   /usr/lib/systemd/system/tomcat.service
+#this might not work!!!
+echo 'USE_JSVC=true' >> ${TOMCAT_CONF}
+sed -i "s#^JAVA_HOME=.*#JAVA_HOME=\"${JAVA_HOME}\"#"  ${TOMCAT_CONF}
+
+
+######################################################################################
+# Shibboleth IdP                                                                     #
+######################################################################################
+
+
+# download and unpack shibboleth idp v3
+wget -q http://shibboleth.net/downloads/identity-provider/latest/${SHIB_FILE}
+mkdir ${SHIB_DIR}
+tar xzf ${SHIB_FILE} -C ${SHIB_DIR}
+mkdir ${SHIB_INSTALL_DIR}
+
+# create idp.merge.properties file
+cat > "${SHIB_INSTALL_PROPERTIES}" <<EOF
+idp.sealer.storePassword= changeit
+idp.sealer.keyPassword= changeit
+idp.entityID= https://`hostname`/idp/shibboleth
+idp.scope= `domainname`
+EOF
+
+# install shibboleth 
+pushd ${SHIB_DIR}/*/
+./bin/install.sh  -Didp.src.dir=. \
+                       -Didp.target.dir="${SHIB_INSTALL_DIR}" \
+                       -Didp.merge.properties="${SHIB_INSTALL_PROPERTIES}" \
+                       -Didp.host.name=`hostname` \
+                       -Didp.scope=`domainname` \
+                       -Didp.sealer.password="changeit" \
+                       -Didp.keystore.password="changeit"
+popd
+
+# setting up tomcat for shibboleth idp
+# tomcat will find the .war to deploy by this config file
+cat > ${CATALINA_HOME}/conf/Catalina/localhost/idp.xml <<EOF
+<Context docBase="${SHIB_INSTALL_DIR}/war/idp.war"
+               privileged="true"
+               antiResourceLocking="false"
+               swallowOutput="true" />
+EOF
+
+# define idp.home for tomcat
+sed -i "s/CATALINA_OPTS=.*/CATALINA_OPTS='-Xmx512m -XX:MaxPermSize=128m -Didp.home=\/opt\/shibboleth-idp\'/" ${TOMCAT_CONF}
+# downalod jstl support
+wget -q https://build.shibboleth.net/nexus/service/local/repositories/thirdparty/content/javax/servlet/jstl/1.2/jstl-1.2.jar -O ${CATALINA_HOME}/lib
+# disable session persistence in tomcat
+if [ -z "`xmlstarlet sel -T -t -i "/Context/Manager" -o exists ${TOMCAT_CONF_DIR}/context.xml`" ]; then
+	xmlstarlet ed -L -s "/Context" --type elem -n "Manager"  \
+		-i "//Manager" -t attr -n "pathname" -v "" \
+		 ${TOMCAT_CONF_DIR}/context.xml 
+fi
+# give permission to tomcat over the shibboleth installation
+chown -R tomcat:tomcat ${SHIB_INSTALL_DIR}
+# change the java version used in JSP compilation to 1.7 (1.6 is not supported anymore)
+if [ -z `xmlstarlet sel -T -N x="http://java.sun.com/xml/ns/javaee" -t \
+	-i "/x:web-app/x:servlet[x:servlet-name='jsp']/x:init-param[x:param-name='compilerSourceVM']" \
+	-o exists -n ${TOMCAT_CONF_DIR}/web.xml` ]; then
+	
+	xmlstarlet ed -L -N x="http://java.sun.com/xml/ns/javaee" \
+	   	-s "/x:web-app/x:servlet[x:servlet-name='jsp']" --type elem -n "init-param-tmp" \
+		-s //init-param-tmp --type elem -n "param-name" -v "compilerSourceVM" \
+		-s //init-param-tmp --type elem -n "param-value" -v "1.7" \
+		-r //init-param-tmp -v "init-param" ${TOMCAT_CONF_DIR}/web.xml
+
+fi
+if [ -z `xmlstarlet sel -T -N x="http://java.sun.com/xml/ns/javaee" -t \
+	-i "/x:web-app/x:servlet[x:servlet-name='jsp']/x:init-param[x:param-name='compilerTargetVM']" \
+	-o exists -n ${TOMCAT_CONF_DIR}/web.xml` ]; then
+	
+	xmlstarlet ed -L -N x="http://java.sun.com/xml/ns/javaee" \
+	   	-s "/x:web-app/x:servlet[x:servlet-name='jsp']" --type elem -n "init-param-tmp" \
+		-s //init-param-tmp --type elem -n "param-name" -v "compilerTargetVM" \
+		-s //init-param-tmp --type elem -n "param-value" -v "1.7" \
+		-r //init-param-tmp -v "init-param" ${TOMCAT_CONF_DIR}/web.xml
+
+fi

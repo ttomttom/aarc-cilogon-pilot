@@ -1,0 +1,40 @@
+#!/bin/bash
+
+set -x
+
+JAVA_HOME="/usr/java/default"
+CATALINA_HOME="/usr/share/tomcat6"
+
+######################################################################################
+# General config and utils                                                           #
+######################################################################################
+
+yum -y install xmlstarlet wget
+
+# includes /usr/sbin in non-login shells
+echo '. /etc/profile' >> /home/jenkins/.bashrc
+
+#make sure domainname is set
+domainname demo
+hostname `hostname -s`.demo
+
+######################################################################################
+# Dependencies  (java + tomcat + httpd + shibboleth)                                 #
+######################################################################################
+
+# installing java 8
+wget -q --no-cookies --no-check-certificate \
+        --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F;   \
+        oraclelicense=accept-securebackup-cookie" \
+        "http://download.oracle.com/otn-pub/java/jdk/8u45-b14/jdk-8u45-linux-x64.rpm"
+rpm -iv jdk-8u45-linux-x64.rpm
+echo "export JAVA_HOME=${JAVA_HOME}" >> /etc/bashrc
+echo 'export PATH=${JAVA_HOME}/bin:${PATH}' >> /etc/bashrc
+
+# installing tomcat
+yum -y install tomcat6
+rm -rf ${CATALINA_HOME}/webapps/*
+echo "export CATALINA_HOME=${CATALINA_HOME}" >> /etc/bashrc
+
+# installing httpd
+yum -y install httpd httpd-tools mod_ssl

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <actions/>
+  <description>Set up environment for OA4MP server. This includes setting up the tomcat container (by calling either tomcat-ssl or tomacat-httpd), and installing dependencies (java mail, jglobus)</description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.scm.NullSCM"/>
+  <assignedNode>oa4mp-server</assignedNode>
+  <canRoam>false</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.plugins.parameterizedtrigger.TriggerBuilder plugin="parameterized-trigger@2.28">
+      <configs>
+        <hudson.plugins.parameterizedtrigger.BlockableBuildTriggerConfig>
+          <configs>
+            <hudson.plugins.parameterizedtrigger.NodeParameters/>
+            <hudson.plugins.parameterizedtrigger.PredefinedBuildParameters>
+              <properties>PROXY_PATH=/oauth2</properties>
+            </hudson.plugins.parameterizedtrigger.PredefinedBuildParameters>
+          </configs>
+          <projects>oa4mp.prerequisites.tomcat-httpd</projects>
+          <condition>ALWAYS</condition>
+          <triggerWithNoParameters>false</triggerWithNoParameters>
+          <block>
+            <buildStepFailureThreshold>
+              <name>FAILURE</name>
+              <ordinal>2</ordinal>
+              <color>RED</color>
+              <completeBuild>true</completeBuild>
+            </buildStepFailureThreshold>
+            <unstableThreshold>
+              <name>UNSTABLE</name>
+              <ordinal>1</ordinal>
+              <color>YELLOW</color>
+              <completeBuild>true</completeBuild>
+            </unstableThreshold>
+            <failureThreshold>
+              <name>FAILURE</name>
+              <ordinal>2</ordinal>
+              <color>RED</color>
+              <completeBuild>true</completeBuild>
+            </failureThreshold>
+          </block>
+          <buildAllNodesWithLabel>false</buildAllNodesWithLabel>
+        </hudson.plugins.parameterizedtrigger.BlockableBuildTriggerConfig>
+      </configs>
+    </hudson.plugins.parameterizedtrigger.TriggerBuilder>
+    <hudson.tasks.Shell>
+      <command># Installing Java Mail 1.5.4
+
+if [ -z "`find ${CATALINA_HOME}/lib -type f -name javax.mail.jar`" ]; then
+
+     wget -q http://java.net/projects/javamail/downloads/download/javax.mail.jar
+     sudo cp javax.mail.jar ${CATALINA_HOME}/lib/
+
+     if [ -z "`xmlstarlet sel -T  -t -i /Context/Resource -o exists ${CATALINA_HOME}/conf/context.xml`" ]; then 
+            sudo xmlstarlet ed -L -s /Context -t elem -n Resource -v "" \
+                                  -i //Resource -t attr -n "name" -v "mail/Session" \
+                                  -i //Resource -t attr -n "type" -v "javax.mail.Session" \
+                                  -i //Resource -t attr -n "auth" -v "Container" \
+                                  ${CATALINA_HOME}/conf/context.xml
+     fi
+
+     EMAIL_TEMPLATE_DIR=/var/www/config
+     #mkdir -p ${EMAIL_TEMPLATE_DIR}
+
+     # maybe add templates in /var/www ??? (although it looks like the oauth2.war contains it
+
+fi
+</command>
+    </hudson.tasks.Shell>
+    <hudson.tasks.Shell>
+      <command># Install jsse  and jglobus-core
+
+sudo yum -y install jglobus-jsse globus-ssl-proxies</command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers/>
+  <buildWrappers>
+    <hudson.plugins.ws__cleanup.PreBuildCleanup plugin="ws-cleanup@0.26">
+      <deleteDirs>false</deleteDirs>
+      <cleanupParameter/>
+      <externalDelete/>
+    </hudson.plugins.ws__cleanup.PreBuildCleanup>
+  </buildWrappers>
+</project>

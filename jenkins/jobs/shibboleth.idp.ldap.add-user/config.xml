@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <actions/>
+  <description>Adds a dummy user account for testing into LDAP. Makes sure that the dummy account has every relevant field which is required later on by the shibboleth attribute-releas.xml (uid,cn,mail)&#13;
+&#13;
+Accepted options:&#13;
+&#13;
+LDAP_ADMIN_PW                    (optional)    changeit&#13;
+LDAP_BIND_DN                       (optional)    cn=Manager,dc=my-domain,dc=com&#13;
+DUMMY_PASSWORD              (optional)    dummy&#13;
+DUMMY_USERNAME               (optional)    dummy</description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.scm.NullSCM"/>
+  <assignedNode>idp</assignedNode>
+  <canRoam>false</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.tasks.Shell>
+      <command>DUMMY_PASSWORD=${DUMMY_PASSWORD:-dummy}
+DUMMY_USERNAME=${DUMMY_USERNAME:-dummy}
+LDAP_ADMIN_PW=${LDAP_ADMIN_PW:-changeit}
+LDAP_BIND_DN=${LDAP_BIND_DN:-cn=Manager,dc=my-domain,dc=com}
+
+DUMMY_PASSWORD_HASH=`slappasswd -s ${DUMMY_PASSWORD}`
+
+cat &gt; dummy.ldif &lt;&lt;EOF
+dn: dc=my-domain,dc=com
+dc: my-domain
+objectClass: top
+objectClass: domain
+
+dn: ou=people,dc=my-domain,dc=com
+objectClass: organizationalUnit
+ou: people
+
+dn: ou=computereng,dc=my-domain,dc=com
+objectclass: organizationalunit
+ou: computereng
+
+dn: uid=${DUMMY_USERNAME},ou=people,dc=my-domain,dc=com
+objectClass: inetOrgPerson
+objectClass: eduperson
+userpassword: ${DUMMY_PASSWORD_HASH}
+cn: Dummy Dummyson
+uid: ${DUMMY_USERNAME}
+sn: Dummyson
+mail: dummy@my-domain.com
+eduPersonOrgUnitDN: ou=computereng,dc=my-domain,dc=com
+eduPersonOrgUnitDN: ou=people,dc=my-domain,dc=com
+eduPersonPrimaryOrgUnitDN: ou=people,dc=my-domain,dc=com
+EOF
+
+
+ldapadd -x -w ${LDAP_ADMIN_PW} -D "${LDAP_BIND_DN}" -f dummy.ldif  || if [ $? -ne 68 ]; then  exit 1; fi</command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers/>
+  <buildWrappers>
+    <hudson.plugins.envfile.EnvFileBuildWrapper plugin="envfile@1.2">
+      <filePath>/var/lib/jenkins/demo-config/shibboleth-idp.conf</filePath>
+    </hudson.plugins.envfile.EnvFileBuildWrapper>
+  </buildWrappers>
+</project>

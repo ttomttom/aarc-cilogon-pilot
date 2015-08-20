@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <actions/>
+  <description>Configure tomcat as a standalone container serving https through port 8443</description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.scm.NullSCM"/>
+  <assignedNode>oa4mp-server||oa4mp-client</assignedNode>
+  <canRoam>false</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.tasks.Shell>
+      <command># Prepare environment
+# CATALINA_HOME setting moved to template definition
+#if [ -z "${CATALINA_HOME}" ]; then
+#    export CATALINA_HOME=/usr/share/tomcat6     
+#fi
+
+#if [ -z "`grep CATALINA_HOME /etc/bashrc`" ]; then
+#    echo 'export CATALINA_HOME=/usr/share/tomcat6' | sudo tee -a /etc/bashrc  
+#fi
+
+# Configure SSL in tomcat
+
+KS_PASS=changeit
+CA_FILE=`grid-default-ca -list | grep "[:space:]*Location" | cut -d : -f 2 | tr -d [:space:]`
+
+sudo openssl pkcs12 -export -in /etc/grid-security/hostcert.pem -inkey /etc/grid-security/hostkey.pem -out /etc/grid-security/hostcert.p12 -name tomcat -CAfile ${CA_FILE} -caname root -chain -passout pass:${KS_PASS}
+
+sudo keytool -importkeystore -noprompt -srckeystore /etc/grid-security/hostcert.p12 -srcstorepass ${KS_PASS} -destkeystore /etc/grid-security/tomcat-keystore -srcstoretype pkcs12 -storepass ${KS_PASS}
+
+sudo chmod 600 /etc/grid-security/hostcert.p12 /etc/grid-security/tomcat-keystore
+sudo chown tomcat:tomcat /etc/grid-security/tomcat-keystore
+
+if [ -z `xmlstarlet sel -T -t -i "/Server/Service/Connector[@port='8443']" -o exists ${CATALINA_HOME}/conf/server.xml` ]; then
+
+        sudo xmlstarlet ed -L -s /Server/Service -t elem -n SSLConnector -v "" \
+                       -i //SSLConnector -t attr -n "port" -v "8443" \
+                       -i //SSLConnector -t attr -n "protocol" -v "HTTP/1.1" \
+                       -i //SSLConnector -t attr -n "SSLEnabled" -v "true" \
+                       -i //SSLConnector -t attr -n "maxThreads" -v "150" \
+                       -i //SSLConnector -t attr -n "scheme" -v "https" \
+                       -i //SSLConnector -t attr -n "secure" -v "true" \
+                       -i //SSLConnector -t attr -n "clientAuth" -v "false" \
+                       -i //SSLConnector -t attr -n "sslProtocol" -v "TLS" \
+                       -i //SSLConnector -t attr -n "keystoreFile" -v "/etc/grid-security/tomcat-keystore" \
+                       -i //SSLConnector -t attr -n "keystorePass" -v "${KS_PASS}" \
+                       -r //SSLConnector -v Connector \
+                       ${CATALINA_HOME}/conf/server.xml
+fi
+</command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers/>
+  <buildWrappers/>
+</project>

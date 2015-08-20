@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <actions/>
+  <description>Set up the Shibboleth SP. This includes:&#13;
+&#13;
+- setting up the protected resource in httpd&#13;
+- configure attribute-mapping&#13;
+- configure IdP metadata provider</description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.scm.NullSCM"/>
+  <assignedNode>sp</assignedNode>
+  <canRoam>false</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.tasks.Shell>
+      <command># register the protected resource in conf.d/shib.conf
+# in this example the protected resource will be at /oauth2/authorize
+
+HTTPD_HOME="/etc/httpd"
+HTTPD_SSL_CONFIG="${HTTPD_HOME}/conf.d/shib.conf"
+
+if [ -z "`grep '&lt;Location /oauth2/authorize&gt;' ${HTTPD_SSL_CONFIG}`" ]; then
+
+    sudo tee -a ${HTTPD_SSL_CONFIG} &lt;&lt;EOF
+&lt;Location /oauth2/authorize&gt;
+  AuthType shibboleth
+  ShibRequestSetting requireSession 1
+  ShibUseHeaders On
+  Require valid-user
+&lt;/Location&gt;
+EOF
+
+fi</command>
+    </hudson.tasks.Shell>
+    <hudson.tasks.Shell>
+      <command># change attribute-map.xml
+SHIB_DIR="/etc/shibboleth"
+SHIB_ATTR_MAP="${SHIB_DIR}/attribute-map.xml"
+
+add_attribute() {
+
+
+if [ -z "`xmlstarlet sel -T -N x="urn:mace:shibboleth:2.0:attribute-map" -t -i "//x:Attribute[@id='${2}']" -o exists ${SHIB_ATTR_MAP}`" ]; then
+
+    sudo xmlstarlet ed -L -N x="urn:mace:shibboleth:2.0:attribute-map" -s "/x:Attributes" \
+                -t elem -n "TmpAttribute" -v "" \
+                -i //TmpAttribute -t attr -n "name" -v "$1" \
+                -i //TmpAttribute -t attr -n "id" -v "$2" \
+                -r //TmpAttribute -v Attribute  ${SHIB_ATTR_MAP}
+
+fi
+
+}
+
+
+add_attribute urn:oid:2.5.4.3 commonName
+add_attribute urn:oid:0.9.2342.19200300.100.1.1 uid
+add_attribute urn:oid:0.9.2342.19200300.100.1.3 mail</command>
+    </hudson.tasks.Shell>
+    <org.jenkinsci.plugins.scriptler.builder.ScriptlerBuilder plugin="scriptler@2.7">
+      <builderId>1438793235426_12</builderId>
+      <scriptId>3.groovy</scriptId>
+      <propagateParams>false</propagateParams>
+      <parameters>
+        <org.jenkinsci.plugins.scriptler.config.Parameter>
+          <name>KEYWORDS</name>
+          <value>idp</value>
+        </org.jenkinsci.plugins.scriptler.config.Parameter>
+        <org.jenkinsci.plugins.scriptler.config.Parameter>
+          <name>RETURNED_ENV_VARIALBE</name>
+          <value>SHIBBOLETH_IDP_HOST</value>
+        </org.jenkinsci.plugins.scriptler.config.Parameter>
+      </parameters>
+    </org.jenkinsci.plugins.scriptler.builder.ScriptlerBuilder>
+    <hudson.tasks.Shell>
+      <command>SHIB_DIR="/etc/shibboleth"
+SHIB_CONFIG="${SHIB_DIR}/shibboleth2.xml"
+
+wget -q --no-check-certificate "https://${SHIBBOLETH_IDP_HOST}/idp/shibboleth" -O "idp.metadata"
+SHIB_IDP_ENTITY=`xmlstarlet sel -T -N x="urn:oasis:names:tc:SAML:2.0:metadata" -t -v "/x:EntityDescriptor/@entityID" idp.metadata`
+
+# configure SP entityID and SSL options
+sudo xmlstarlet ed -L -N x="urn:mace:shibboleth:2.0:native:sp:config" \
+                -u "//x:ApplicationDefaults/@entityID" -v "https://${HOSTNAME}" ${SHIB_CONFIG}
+
+sudo xmlstarlet ed -L -N x="urn:mace:shibboleth:2.0:native:sp:config" \
+                -u "///x:Sessions/@handlerSSL" -v "true" ${SHIB_CONFIG}
+
+sudo xmlstarlet ed -L -N x="urn:mace:shibboleth:2.0:native:sp:config" \
+                -u "///x:Sessions/@cookieProps" -v "https" ${SHIB_CONFIG}
+
+
+# configure IdP entityID, remove discovery elements
+sudo xmlstarlet ed -L -N x="urn:mace:shibboleth:2.0:native:sp:config" \
+                -u "////x:SSO/@entityID" -v "${SHIB_IDP_ENTITY}" ${SHIB_CONFIG}
+
+sudo xmlstarlet ed -L -N x="urn:mace:shibboleth:2.0:native:sp:config" \
+                -d "////x:SSO/@discoveryProtocol" ${SHIB_CONFIG}
+
+sudo xmlstarlet ed -L -N x="urn:mace:shibboleth:2.0:native:sp:config" \
+                -d "////x:SSO/@discoveryURL" ${SHIB_CONFIG}
+
+
+# configure metadata provider
+if [ -z `xmlstarlet sel -N x="urn:mace:shibboleth:2.0:native:sp:config" -t -i "//x:ApplicationDefaults/x:MetadataProvider" -o exists ${SHIB_CONFIG}` ]; then
+
+        sudo xmlstarlet ed -L -N x="urn:mace:shibboleth:2.0:native:sp:config" -s "//x:ApplicationDefaults" -t elem -n MetadataProvider -v "" \
+                       -i ///MetadataProvider -t attr -n "type" -v "XML" \
+                       -i ///MetadataProvider -t attr -n "uri" -v "${SHIB_IDP_ENTITY}" \
+                       -i ///MetadataProvider -t attr -n "backingFilePath" -v "ipd-metadata.xml" \
+                       -i ///MetadataProvider -t attr -n "reloadInterval" -v "7200" \
+                       ${SHIB_CONFIG}
+fi
+
+</command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers/>
+  <buildWrappers/>
+</project>

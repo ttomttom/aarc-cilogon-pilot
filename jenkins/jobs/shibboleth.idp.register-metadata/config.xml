@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <actions/>
+  <description>Dowloads the SP Metadata into the Shibboleth IdP and registeres it.</description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.scm.NullSCM"/>
+  <assignedNode>idp</assignedNode>
+  <canRoam>false</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <org.jenkinsci.plugins.scriptler.builder.ScriptlerBuilder plugin="scriptler@2.7">
+      <builderId>1438855150841_14</builderId>
+      <scriptId>3.groovy</scriptId>
+      <propagateParams>false</propagateParams>
+      <parameters>
+        <org.jenkinsci.plugins.scriptler.config.Parameter>
+          <name>KEYWORDS</name>
+          <value>sp</value>
+        </org.jenkinsci.plugins.scriptler.config.Parameter>
+        <org.jenkinsci.plugins.scriptler.config.Parameter>
+          <name>RETURNED_ENV_VARIALBE</name>
+          <value>SHIBBOLETH_SP_HOST</value>
+        </org.jenkinsci.plugins.scriptler.config.Parameter>
+      </parameters>
+    </org.jenkinsci.plugins.scriptler.builder.ScriptlerBuilder>
+    <hudson.tasks.Shell>
+      <command>SP_METADATA_ENDPOINT=https://${SHIBBOLETH_SP_HOST}/Shibboleth.sso/Metadata
+
+if [ -z "${SP_METADATA_ENDPOINT}" ]; then
+    echo 'No SP metadata endpoint specified!'
+    exit 1
+fi
+
+SHIB_SP_METADATA="/opt/shibboleth-idp/metadata/sp-metadata.xml"
+SHIB_METADATA_CONFIG="/opt/shibboleth-idp/conf/metadata-providers.xml"
+
+# download metadata
+sudo wget -q --no-check-certificate "${SP_METADATA_ENDPOINT}" -O ${SHIB_SP_METADATA}
+if [ -z "`sudo xmlstarlet sel -T -N x="urn:mace:shibboleth:2.0:metadata" \
+          -t -i "/x:MetadataProvider/x:MetadataProvider[@metadataFile='${SHIB_SP_METADATA}']" \
+          -o exists ${SHIB_METADATA_CONFIG}`" ]; then
+
+        sudo xmlstarlet ed -L -N x="urn:mace:shibboleth:2.0:metadata" \
+                -s "/x:MetadataProvider" --type elem -n "InnerMetadataProvider" \
+                -s //InnerMetadataProvider --type attr -n "id" -v "LocalMetadata" \
+                -s //InnerMetadataProvider --type attr -n "xsi:type" -v "FilesystemMetadataProvider" \
+                -s //InnerMetadataProvider --type attr -n "metadataFile" -v "${SHIB_SP_METADATA}" \
+                -r //InnerMetadataProvider -v "MetadataProvider" ${SHIB_METADATA_CONFIG}
+
+fi
+</command>
+    </hudson.tasks.Shell>
+    <hudson.plugins.parameterizedtrigger.TriggerBuilder plugin="parameterized-trigger@2.28">
+      <configs>
+        <hudson.plugins.parameterizedtrigger.BlockableBuildTriggerConfig>
+          <configs>
+            <hudson.plugins.parameterizedtrigger.NodeParameters/>
+          </configs>
+          <projects>shibboleth.idp.restart</projects>
+          <condition>ALWAYS</condition>
+          <triggerWithNoParameters>false</triggerWithNoParameters>
+          <block>
+            <buildStepFailureThreshold>
+              <name>FAILURE</name>
+              <ordinal>2</ordinal>
+              <color>RED</color>
+              <completeBuild>true</completeBuild>
+            </buildStepFailureThreshold>
+            <unstableThreshold>
+              <name>UNSTABLE</name>
+              <ordinal>1</ordinal>
+              <color>YELLOW</color>
+              <completeBuild>true</completeBuild>
+            </unstableThreshold>
+            <failureThreshold>
+              <name>FAILURE</name>
+              <ordinal>2</ordinal>
+              <color>RED</color>
+              <completeBuild>true</completeBuild>
+            </failureThreshold>
+          </block>
+          <buildAllNodesWithLabel>false</buildAllNodesWithLabel>
+        </hudson.plugins.parameterizedtrigger.BlockableBuildTriggerConfig>
+      </configs>
+    </hudson.plugins.parameterizedtrigger.TriggerBuilder>
+  </builders>
+  <publishers/>
+  <buildWrappers/>
+</project>

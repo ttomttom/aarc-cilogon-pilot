@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <actions/>
+  <description>This task is meant to be called as part of another task, which we call the parent task. This parent task is usually intended for setting up a testing node that requires a cetificate. For details on how this task has to be called see the "Trigger/call builds on other projects" section of certificates-master.create-certificate.test. Acceptable calling parameters:&#13;
+&#13;
+&#13;
+CN=(string)                    (required)     The CN that the certificate should take&#13;
+SUB_CA=(string)            (optional)      An alias for the sub CA you want to create&#13;
+SUB_CA_CN=(string)     (optional)      The CN of the sub CA you want to create&#13;
+EMAIL=(string)               (optional)      Email address to add to the certificate&#13;
+&#13;
+Note : By default the new host certificate is signed with rootCA. If you want to create and use an intermediate sub CA instead, you must specify both SUB_CA_CN and SUB_CA! In case the specified SUB_CA is recognized as previously created no new sub CA will be created, instead the old one gets reused. This means that it is safe to pass 'rootCA' as SUB_CA, because this will have the same effect as not passing any SUB_CA value. &#13;
+&#13;
+Downloads the latest certificate bundle archived, and a new certificate is created. Unlike certificate-master.inject-certificate, this task does not copy the newly created certificate, only archives it. The parent task is required to copy the latest artifact of this task. The new certificate can be found in the artifact tarball under cert_testdir/${SUB_CA:-rootCA}/aliases/C=NL,O=Example,OU=PDP,CN=${CN}.crt / .key &#13;
+&#13;
+Limitations:  no email address is added to the created certs by default, so we complete openssl.cnf with a static email address</description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.plugins.copyartifact.CopyArtifactPermissionProperty plugin="copyartifact@1.35.2">
+      <projectNameList>
+        <string>certificates-master.*</string>
+        <string>*</string>
+      </projectNameList>
+    </hudson.plugins.copyartifact.CopyArtifactPermissionProperty>
+  </properties>
+  <scm class="hudson.scm.SubversionSCM" plugin="subversion@2.5.1">
+    <locations>
+      <hudson.scm.SubversionSCM_-ModuleLocation>
+        <remote>http://ndpfsvn.nikhef.nl/ro/mwsec/trunk/mwsec-utils/certificate_tester</remote>
+        <credentialsId/>
+        <local>.</local>
+        <depthOption>infinity</depthOption>
+        <ignoreExternalsOption>true</ignoreExternalsOption>
+      </hudson.scm.SubversionSCM_-ModuleLocation>
+    </locations>
+    <excludedRegions/>
+    <includedRegions/>
+    <excludedUsers/>
+    <excludedRevprop/>
+    <excludedCommitMessages/>
+    <workspaceUpdater class="hudson.scm.subversion.CheckoutUpdater"/>
+    <ignoreDirPropChanges>false</ignoreDirPropChanges>
+    <filterChangelog>false</filterChangelog>
+  </scm>
+  <assignedNode>master</assignedNode>
+  <canRoam>false</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.plugins.copyartifact.CopyArtifact plugin="copyartifact@1.35.2">
+      <project>certificates-master.create-root</project>
+      <filter>cert_testdir.tar.gz</filter>
+      <target>certificates-master.create-root.artifact/</target>
+      <excludes/>
+      <selector class="hudson.plugins.copyartifact.StatusBuildSelector"/>
+      <doNotFingerprintArtifacts>false</doNotFingerprintArtifacts>
+    </hudson.plugins.copyartifact.CopyArtifact>
+    <hudson.plugins.copyartifact.CopyArtifact plugin="copyartifact@1.35.2">
+      <project>certificates-master.inject-hostcert.old</project>
+      <filter>cert_testdir.tar.gz</filter>
+      <target>certificates-master.inject-hostcert.artifact/</target>
+      <excludes/>
+      <selector class="hudson.plugins.copyartifact.StatusBuildSelector"/>
+      <optional>true</optional>
+      <doNotFingerprintArtifacts>false</doNotFingerprintArtifacts>
+    </hudson.plugins.copyartifact.CopyArtifact>
+    <hudson.plugins.copyartifact.CopyArtifact plugin="copyartifact@1.35.2">
+      <project>certificates-master.create-certificate</project>
+      <filter>cert_testdir.tar.gz</filter>
+      <target>certificates-master.create-certificate.artifact/</target>
+      <excludes/>
+      <selector class="hudson.plugins.copyartifact.StatusBuildSelector"/>
+      <optional>true</optional>
+      <doNotFingerprintArtifacts>false</doNotFingerprintArtifacts>
+    </hudson.plugins.copyartifact.CopyArtifact>
+    <hudson.tasks.Shell>
+      <command>echo "[[:: Setting defaults ::]]"
+export ca_pass=test
+export default_oid="1.2.840.113612.5.2.2.1"
+export CONFDIR=`pwd`
+export TESTDIR=/tmp/cert_testdir
+#export EMAIL=${EMAIL:-noone@nowhere.no}
+
+if [ -z "${CN}" ]; then
+    echo 'PLEASE PROVIDE A CN!'
+    exit 1  
+fi
+
+echo "[[:: Unpacking latest artifact ::]]"
+
+ROOT_PACK=certificates-master.create-root.artifact/cert_testdir.tar.gz
+INJ_CERT_PACK=certificates-master.inject-hostcert.artifact/cert_testdir.tar.gz
+CERT_PACK=certificates-master.create-certificate.artifact/cert_testdir.tar.gz
+
+mkdir -p artifacts
+
+if [ -f "${ROOT_PACK}" ]; then
+    cp -p ${ROOT_PACK} artifacts/root_pack.tar.gz
+fi
+if [ -f "${INJ_CERT_PACK}" ]; then
+    cp -p ${INJ_CERT_PACK} artifacts/inj_cert_pack.tar.gz
+fi
+if [ -f "${CERT_PACK}" ]; then
+    cp -p ${CERT_PACK} artifacts/cert_pack.tar.gz
+fi
+
+NEWEST=`ls -t1 artifacts | head -n 1`
+rm -rf ${TESTDIR}
+tar xzf artifacts/${NEWEST} -C /tmp/
+
+if [ -f "${TESTDIR}/aliases/${CN}.cert" ]; then
+     echo "Certificate with CN = ${CN} already exists!"
+     cp artifacts/${NEWEST} cert_testdir.tar.gz
+     exit 0
+fi 
+
+pushd ${CONFDIR}
+
+if [ -n "${EMAIL}" ]; then 
+     sed -i "s/\[\ user_extensions\ \]/[ user_extensions ]\nsubjectAltName=email:${EMAIL}/" openssl.cnf
+fi
+source ./functions
+
+echo "[[:: Creating certificate for $CN ::]]"
+
+CA=${SUB_CA:-rootCA}
+if [ ! -d ${TESTDIR}/${CA} ]; then
+    echo "[[:: Creating sub CA $CA ::]]"
+    create_sub_ca ca=rootCA subca="${CA}" cn="${CA}"
+fi
+
+if [ -z "`ls ${TESTDIR}/${CA}/aliases/*CN="${CN}".crt`" ]; then
+    create_cert cn="$CN" ca="$CA" nodes
+else
+    echo "[[:: Certificate with CA:$CA and CN:$CN already exists ::]]"
+fi
+
+popd
+
+echo "[[:: Packaging artifact ::]]"
+
+tar czfp cert_testdir.tar.gz -C /tmp/ cert_testdir
+
+</command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers>
+    <hudson.tasks.ArtifactArchiver>
+      <artifacts>cert_testdir.tar.gz</artifacts>
+      <allowEmptyArchive>false</allowEmptyArchive>
+      <onlyIfSuccessful>true</onlyIfSuccessful>
+      <fingerprint>false</fingerprint>
+      <defaultExcludes>true</defaultExcludes>
+    </hudson.tasks.ArtifactArchiver>
+  </publishers>
+  <buildWrappers/>
+</project>

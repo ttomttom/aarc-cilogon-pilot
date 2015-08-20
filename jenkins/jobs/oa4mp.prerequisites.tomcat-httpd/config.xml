@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <actions/>
+  <description>Sets up tomcat as a standalone container serving SSL requests through port 8443&#13;
+&#13;
+It expects an input parameter specifying the endpoint to proxy requests to.&#13;
+&#13;
+Accepted options:&#13;
+&#13;
+PROXY_PATH       (optional)    / </description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.scm.NullSCM"/>
+  <assignedNode>oa4mp-server||oa4mp-client</assignedNode>
+  <canRoam>false</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.tasks.Shell>
+      <command>PROXY_PATH=${PROXY_PATH:-/}
+HTTPD_HOME="/etc/httpd"
+HTTPD_SSL_CONFIG="${HTTPD_HOME}/conf.d/ssl.conf"
+
+# close unused ports in tomcat
+if [ -z "`xmlstarlet sel -T -t -i "/Server/Service/Connector[@port='8080']" -o exists ${CATALINA_HOME}/conf/server.xml`" ]; then
+
+        sudo xmlstarlet ed -L -d /Server/Service/Connector[@port='8080'] ${CATALINA_HOME}/conf/server.xml
+fi
+
+if [ -n "`xmlstarlet sel -T -t -i "/Server/Service/Connector[@port='8443']" -o exists ${CATALINA_HOME}/conf/server.xml`" ]; then
+
+        sudo xmlstarlet ed -L -d /Server/Service/Connector[@port='8443'] ${CATALINA_HOME}/conf/server.xml
+fi
+
+# add httpd configuration
+sudo sed -i "s/^#*ServerName.*/ServerName `hostname`/" ${HTTPD_SSL_CONFIG}
+if [ -z "`grep 'UseCanonicalName On' ${HTTPD_SSL_CONFIG}`" ]; then
+        sudo sed -i '/ServerName/ a\UseCanonicalName On' ${HTTPD_SSL_CONFIG}
+fi
+if [ -z "`grep 'UseCanonicalPhysicalPort On' ${HTTPD_SSL_CONFIG}`" ]; then
+        sudo sed -i '/ServerName/ a\UseCanonicalPhysicalPort On' ${HTTPD_SSL_CONFIG}
+fi
+
+sudo sed -i "s:^#*SSLCertificateFile.*:SSLCertificateFile /etc/grid-security/hostcert.pem:" ${HTTPD_SSL_CONFIG}
+sudo sed -i "s:^#*SSLCertificateKeyFile.*:SSLCertificateKeyFile /etc/grid-security/hostkey.pem:" ${HTTPD_SSL_CONFIG}
+
+#HOSTCERT_ISSUER="`openssl x509 -in /etc/grid-security/hostcert.pem -issuer -noout | sed 's/^issuer= //'`"
+#HOSTCA_HASH=`grid-default-ca --list | grep "${HOSTCERT_ISSUER}" | head -n 1 | cut -d ' ' -f 2`
+#HOSTCA=`readlink -f /etc/grid-security/certificates/${HOSTCA_HASH}.0`
+
+HOSTCA=""
+for ca_cert in /etc/grid-security/certificates/*.pem; do
+        RESULT=`openssl verify -CAfile $ca_cert /etc/grid-security/hostcert.pem`
+        if [ $? -eq 0 ]; then
+                HOSTCA="${ca_cert}"
+                break
+        fi
+done
+
+sudo sed -i "s:^#*SSLCertificateChainFile.*:SSLCertificateChainFile ${HOSTCA}:" ${HTTPD_SSL_CONFIG}
+
+if [ -z "`grep 'ProxyRequests Off' ${HTTPD_SSL_CONFIG}`" ]; then
+        sudo sed -i '/ServerName/ a\ProxyRequests Off' ${HTTPD_SSL_CONFIG}
+fi
+if [ -z "`grep "ProxyPass ${PROXY_PATH} ajp://127.0.0.1:8009${PROXY_PATH}" ${HTTPD_SSL_CONFIG}`" ]; then
+        sudo sed -i "/ServerName/ a\ProxyPass ${PROXY_PATH} ajp://127.0.0.1:8009${PROXY_PATH}" ${HTTPD_SSL_CONFIG}
+fi</command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers/>
+  <buildWrappers/>
+</project>

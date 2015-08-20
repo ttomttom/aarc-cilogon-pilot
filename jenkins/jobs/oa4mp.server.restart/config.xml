@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <actions/>
+  <description/>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.scm.NullSCM"/>
+  <assignedNode>oa4mp-server</assignedNode>
+  <canRoam>false</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.tasks.Shell>
+      <command># restart service 
+
+sudo chown -R tomcat:tomcat ${CATALINA_HOME}/webapps/
+sudo chown -R tomcat:tomcat /var/www/server
+
+
+sudo service tomcat6 stop || echo 'stopped?'
+sleep 10
+sudo service tomcat6 start
+
+sleep 30
+
+sudo service httpd stop || echo 'stopped?'
+sleep 10
+sudo service httpd start
+</command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers/>
+  <buildWrappers/>
+</project>

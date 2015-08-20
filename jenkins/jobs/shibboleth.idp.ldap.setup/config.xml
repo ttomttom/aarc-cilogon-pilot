@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <actions/>
+  <description>Installs and configures OpenLDAP &#13;
+&#13;
+Configures LDAP to be used as backend for the IdP by filling in the shibboleth LDAP configuration file (ldap.properties)&#13;
+Loads relevant LDAP schemas (including eduPerson 201310)&#13;
+&#13;
+Accepted options:&#13;
+&#13;
+LDAP_ADMIN_PW                    (optional)    changeit&#13;
+LDAP_SEARCH_BASE_DN      (optional)    ou=people,dc=my-domain,dc=com&#13;
+LDAP_BIND_DN                       (optional)    cn=Manager,dc=my-domain,dc=com</description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.scm.NullSCM"/>
+  <assignedNode>idp</assignedNode>
+  <canRoam>false</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.tasks.Shell>
+      <command>LDAP_ADMIN_PW=${LDAP_ADMIN_PW:-changeit}
+LDAP_BIND_DN=${LDAP_BIND_DN:-cn=Manager,dc=my-domain,dc=com}
+LDAP_SEARCH_BASE_DN=${LDAP_SEARCH_BASE_DN:-ou=people,dc=my-domain,dc=com}
+
+LDAP_CERT="/etc/openldap/certs/ldapcert.pem"
+LDAP_KEY="/etc/openldap/certs/ldapkey.pem"
+LDAP_CONF="/etc/openldap/slapd.d/cn=config.ldif"
+LDAP_CONF_DB="/etc/openldap/slapd.d/cn=config/olcDatabase={2}hdb.ldif"
+LDAP_CONF_DB_MON="/etc/openldap/slapd.d/cn=config/olcDatabase={1}monitor.ldif"
+SHIB_LDAP_CONFIG="/opt/shibboleth-idp/conf/ldap.properties" 
+
+##############################################################################################
+
+sudo yum -y install openldap openldap-clients openldap-servers
+
+# generate self signed certificate for ldap. shibboleth-idp will have to trust this
+sudo openssl req -newkey rsa:2048 -x509 -nodes -out ${LDAP_CERT} -keyout ${LDAP_KEY} -days 365 \
+        -subj "/C=NL/L=Example/O=LDAP Server/CN=`hostname`"
+sudo chmod 600 ${LDAP_CERT}
+sudo chmod 400 ${LDAP_KEY}
+sudo chown ldap:ldap ${LDAP_CERT} ${LDAP_KEY}
+
+# configure ldap server certificate
+sudo sed -i "s#olcTLSCertificateFile:.*#olcTLSCertificateFile: ${LDAP_CERT}#"  ${LDAP_CONF}
+sudo sed -i "s#olcTLSCertificateKeyFile:.*#olcTLSCertificateKeyFile: ${LDAP_KEY}#"  ${LDAP_CONF}
+sudo sed -i '/^#.*/d' ${LDAP_CONF}
+
+# configure admin user
+LDAP_ADMIN_PW_HASH=`slappasswd -s ${LDAP_ADMIN_PW}`
+if [ -z "`sudo grep '^olcRootPW' ${LDAP_CONF_DB}`" ]; then
+    echo "olcRootPW: ${LDAP_ADMIN_PW_HASH}" | sudo tee -a ${LDAP_CONF_DB}
+else
+    sudo sed -i "s;^#*olcRootPW:.*;olcRootPW: ${LDAP_ADMIN_PW_HASH};" ${LDAP_CONF_DB}
+fi
+
+if [ "${LDAP_BIND_DN}" != "`sudo grep olcRootDN:  "${LDAP_CONF_DB}" | cut -d ':' -f 2 | tr -d ' '`" ]; then
+    sudo sed -i "s/^#*olcRootDN:.*/olcRootDN: ${LDAP_BIND_DN}/" ${LDAP_CONF_DB}
+    sudo sed -i "s/read by dn.base=\".*\"/read by dn.base=\"${LDAP_BIND_DN}\" /" ${LDAP_CONF_DB_MON}
+fi
+
+sudo sed -i '/^#.*/d' ${LDAP_CONF_DB}
+
+# start service 
+sudo service slapd stop || echo 'stopped?'
+sleep 10
+sudo service slapd start
+
+##############################################################################################
+
+# copy ldap certificate into shibboleth trusted cert
+sudo \cp -fp "${LDAP_CERT}" /opt/shibboleth-idp/credentials/ldap-server.crt
+sudo chown tomcat:tomcat /opt/shibboleth-idp/credentials/ldap-server.crt
+
+# change ldap configuration to match setup
+sudo sed -i "s/^#*idp.authn.LDAP.authenticator.*/idp.authn.LDAP.authenticator = anonSearchAuthenticator/" ${SHIB_LDAP_CONFIG}
+sudo sed -i "s/^#*idp.authn.LDAP.ldapURL.*/idp.authn.LDAP.ldapURL = ldap:\/\/`hostname`:389/" ${SHIB_LDAP_CONFIG}
+sudo sed -i "s/^#*idp.authn.LDAP.useStartTLS.*/idp.authn.LDAP.useStartTLS = true/" ${SHIB_LDAP_CONFIG}
+sudo sed -i "s/^#*idp.authn.LDAP.useSSL.*/idp.authn.LDAP.useSSL = false/" ${SHIB_LDAP_CONFIG}
+sudo sed -i "s/^#*idp.authn.LDAP.sslConfig.*/idp.authn.LDAP.sslConfig = certificateTrust/" ${SHIB_LDAP_CONFIG}
+sudo sed -i "s/^#*idp.authn.LDAP.returnAttributes.*/idp.authn.LDAP.returnAttributes = uid,cn,mail/" ${SHIB_LDAP_CONFIG}
+sudo sed -i "s/^#*idp.authn.LDAP.baseDN.*/idp.authn.LDAP.baseDN = ${LDAP_SEARCH_BASE_DN}/" ${SHIB_LDAP_CONFIG}
+sudo sed -i "s/^#*idp.authn.LDAP.bindDN\s*=.*/idp.authn.LDAP.bindDN = ${LDAP_BIND_DN}/" ${SHIB_LDAP_CONFIG}
+sudo sed -i "s/^#*idp.authn.LDAP.bindDNCredential.*/idp.authn.LDAP.bindDNCredential = ${LDAP_ADMIN_PW}/" ${SHIB_LDAP_CONFIG}
+
+</command>
+    </hudson.tasks.Shell>
+    <hudson.tasks.Shell>
+      <command>cat &gt; eduPerson.ldif &lt;&lt;EOF
+# Retrived from:
+#  software.internet2.edu/eduperson/internet2-mace-dir-eduperson-201310.html
+# On:
+#  2013-11-26
+
+dn: cn=eduperson,cn=schema,cn=config
+changetype: add
+objectClass: olcSchemaConfig
+cn: eduperson
+olcAttributeTypes: {0}( 1.3.6.1.4.1.5923.1.1.1.1 NAME 'eduPersonAffiliation' D
+ ESC 'eduPerson per Internet2 and EDUCAUSE' EQUALITY caseIgnoreMatch SUBSTR ca
+ seIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
+olcAttributeTypes: {1}( 1.3.6.1.4.1.5923.1.1.1.2 NAME 'eduPersonNickname' DESC
+  'eduPerson per Internet2 and EDUCAUSE' EQUALITY caseIgnoreMatch SUBSTR caseI
+ gnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
+olcAttributeTypes: {2}( 1.3.6.1.4.1.5923.1.1.1.3 NAME 'eduPersonOrgDN' DESC 'e
+ duPerson per Internet2 and EDUCAUSE' EQUALITY distinguishedNameMatch SYNTAX 1
+ .3.6.1.4.1.1466.115.121.1.12 SINGLE-VALUE )
+olcAttributeTypes: {3}( 1.3.6.1.4.1.5923.1.1.1.4 NAME 'eduPersonOrgUnitDN' DES
+ C 'eduPerson per Internet2 and EDUCAUSE' EQUALITY distinguishedNameMatch SYNT
+ AX 1.3.6.1.4.1.1466.115.121.1.12 )
+olcAttributeTypes: {4}( 1.3.6.1.4.1.5923.1.1.1.5 NAME 'eduPersonPrimaryAffilia
+ tion' DESC 'eduPerson per Internet2 and EDUCAUSE' EQUALITY caseIgnoreMatch SU
+ BSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 SINGLE-VA
+ LUE )
+olcAttributeTypes: {5}( 1.3.6.1.4.1.5923.1.1.1.6 NAME 'eduPersonPrincipalName'
+  DESC 'eduPerson per Internet2 and EDUCAUSE' EQUALITY caseIgnoreMatch SUBSTR
+  caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 SINGLE-VALUE )
+olcAttributeTypes: {6}( 1.3.6.1.4.1.5923.1.1.1.7 NAME 'eduPersonEntitlement' D
+ ESC 'eduPerson per Internet2 and EDUCAUSE' EQUALITY caseExactMatch SYNTAX 1.3
+ .6.1.4.1.1466.115.121.1.15 )
+olcAttributeTypes: {7}( 1.3.6.1.4.1.5923.1.1.1.8 NAME 'eduPersonPrimaryOrgUnit
+ DN' DESC 'eduPerson per Internet2 and EDUCAUSE' EQUALITY distinguishedNameMat
+ ch SYNTAX 1.3.6.1.4.1.1466.115.121.1.12 SINGLE-VALUE )
+olcAttributeTypes: {8}( 1.3.6.1.4.1.5923.1.1.1.9 NAME 'eduPersonScopedAffiliat
+ ion' DESC 'eduPerson per Internet2 and EDUCAUSE' EQUALITY caseIgnoreMatch SYN
+ TAX 1.3.6.1.4.1.1466.115.121.1.15 )
+olcAttributeTypes: {9}( 1.3.6.1.4.1.5923.1.1.1.10 NAME 'eduPersonTargetedID' D
+ ESC 'eduPerson per Internet2 and EDUCAUSE' EQUALITY caseIgnoreMatch SYNTAX 1.
+ 3.6.1.4.1.1466.115.121.1.15 )
+olcAttributeTypes: {10}( 1.3.6.1.4.1.5923.1.1.1.11 NAME 'eduPersonAssurance' D
+ ESC 'eduPerson per Internet2 and EDUCAUSE' EQUALITY caseIgnoreMatch SYNTAX 1.
+ 3.6.1.4.1.1466.115.121.1.15 )
+olcAttributeTypes: {11}( 1.3.6.1.4.1.5923.1.1.1.12 NAME 'eduPersonPrincipalNam
+ ePrior' DESC 'eduPersonPrincipalNamePrior per Internet2'  EQUALITY caseIgnore
+ Match SYNTAX '1.3.6.1.4.1.1466.115.121.1.15' )
+olcAttributeTypes: {12}( 1.3.6.1.4.1.5923.1.1.1.13 NAME 'eduPersonUniqueId' DE
+ SC 'eduPersonUniqueId per Internet2' EQUALITY caseIgnoreMatch SYNTAX '1.3.6.1
+ .4.1.1466.115.121.1.15' )
+olcObjectClasses: {0}( 1.3.6.1.4.1.5923.1.1.2 NAME 'eduPerson' DESC 'eduPerson
+  per Internet2 and EDUCAUSE 201310' AUXILIARY MAY ( eduPersonAffiliation $ ed
+ uPersonNickname $ eduPersonOrgDN $ eduPersonOrgUnitDN $ eduPersonPrimaryAffil
+ iation $ eduPersonPrincipalName $ eduPersonEntitlement $ eduPersonPrimaryOrgU
+ nitDN $ eduPersonScopedAffiliation $ eduPersonTargetedID $ eduPersonAssurance
+ $ eduPersonPrincipalNamePrior $ eduPersonUniqueId ) )
+EOF
+
+sudo ldapadd -Y EXTERNAL -H ldapi:// -f /etc/openldap/schema/cosine.ldif || if [ $? -ne 80 ]; then  exit 1; fi
+sudo ldapadd -Y EXTERNAL -H ldapi:// -f /etc/openldap/schema/nis.ldif || if [ $? -ne 80 ]; then  exit 1; fi
+sudo ldapadd -Y EXTERNAL -H ldapi:// -f /etc/openldap/schema/inetorgperson.ldif || if [ $? -ne 80 ]; then  exit 1; fi
+sudo ldapadd -Y EXTERNAL -H ldapi:// -f  eduPerson.ldif || if [ $? -ne 80 ]; then  exit 1; fi
+
+</command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers/>
+  <buildWrappers>
+    <hudson.plugins.envfile.EnvFileBuildWrapper plugin="envfile@1.2">
+      <filePath>/var/lib/jenkins/demo-config/shibboleth-idp.conf</filePath>
+    </hudson.plugins.envfile.EnvFileBuildWrapper>
+  </buildWrappers>
+</project>

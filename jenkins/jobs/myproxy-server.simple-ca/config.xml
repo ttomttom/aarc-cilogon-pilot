@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <actions/>
+  <description>This task sets up the myproxy-server as a Certificate Authority using SimpleCA.&#13;
+&#13;
+Accepted options:&#13;
+&#13;
+MYPROXY_CA_PASS       (optional)    changeit&#13;
+MYPROXY_CA_DIR          (optional)    /var/lib/globus/simple_ca&#13;
+MYPROXY_EXTRA_DIR    (optional)    /opt/myproxy-extra&#13;
+&#13;
+Flow:&#13;
+&#13;
+ - create root CA with SimpleCA&#13;
+ - change hostcert ownership to myproxy user&#13;
+ - make sure myproxy-certificate-mapapp is available&#13;
+ - modify myproxy-server config files &#13;
+</description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.scm.NullSCM"/>
+  <assignedNode>myproxy-server</assignedNode>
+  <canRoam>false</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.tasks.Shell>
+      <command>MYPROXY_CA_PASS=${MYPROXY_CA_PASS:-changeit}
+
+HOST_CERT_SUBJ=`openssl x509 -in /etc/grid-security/hostcert.pem -subject -noout | sed 's/^subject=\ //'`
+
+MYPROXY_CA_DIR=${MYPROXY_CA_DIR:-/var/lib/globus/simple_ca}
+MYPROXY_EXTRA_DIR=${MYPROXY_EXTRA_DIR:-/opt/myproxy-extra}
+
+# create root certificate
+sudo grid-ca-create -subject "cn=Globus Simple CA for Demo Portal, ou=GlobusTest, o=Grid"  \
+					-noint -force -pass ${MYPROXY_CA_PASS} \
+                    -dir ${MYPROXY_CA_DIR}
+
+CA_HASH=`sudo grid-default-ca --list | grep "^[0-9].*/O=Grid/OU=GlobusTest/CN=Globus Simple CA for Demo Portal" | cut -d ' ' -f 2`
+sudo grid-default-ca -ca ${CA_HASH}
+
+
+# customize file permissions for myproxy
+sudo chown myproxy:myproxy /etc/grid-security/hostkey.pem /etc/grid-security/hostcert.pem
+sudo chown -R myproxy:myproxy ${MYPROXY_CA_DIR}
+sudo ln -s -f /etc/grid-security/hostcert.pem  /etc/grid-security/myproxy/hostcert.pem
+sudo ln -s -f /etc/grid-security/hostkey.pem  /etc/grid-security/myproxy/hostkey.pem
+
+# make sure myproxy-certificate-mapapp is in the right place
+sudo mkdir -p "${MYPROXY_EXTRA_DIR}"
+if [ ! -x "${MYPROXY_EXTRA_DIR}/myproxy-certificate-mapapp" ]; then
+   sudo cp -f `rpm -ql myproxy-doc | grep myproxy-certificate-mapapp` "${MYPROXY_EXTRA_DIR}/"
+   sudo chown -R myproxy:myproxy "${MYPROXY_EXTRA_DIR}"
+   sudo chmod u+x "${MYPROXY_EXTRA_DIR}/myproxy-certificate-mapapp"
+fi
+
+# edit myproxy config
+sudo tee /etc/myproxy-server.config &lt;&lt;EOF
+authorized_retrievers ${HOST_CERT_SUBJ}
+trusted_retrievers ${HOST_CERT_SUBJ}
+default_trusted_retrievers ${HOST_CERT_SUBJ}
+
+cert_dir /etc/grid-security/certificates
+certificate_issuer_cert ${MYPROXY_CA_DIR}/cacert.pem
+certificate_issuer_key ${MYPROXY_CA_DIR}/private/cakey.pem
+certificate_issuer_key_passphrase "${MYPROXY_CA_PASS}"
+certificate_serialfile ${MYPROXY_CA_DIR}/serial
+certificate_out_dir ${MYPROXY_CA_DIR}/newcerts
+
+certificate_mapapp ${MYPROXY_EXTRA_DIR}/myproxy-certificate-mapapp
+EOF
+
+
+
+
+</command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers/>
+  <buildWrappers>
+    <hudson.plugins.ws__cleanup.PreBuildCleanup plugin="ws-cleanup@0.26">
+      <deleteDirs>false</deleteDirs>
+      <cleanupParameter/>
+      <externalDelete/>
+    </hudson.plugins.ws__cleanup.PreBuildCleanup>
+    <hudson.plugins.envfile.EnvFileBuildWrapper plugin="envfile@1.2">
+      <filePath>/var/lib/jenkins/demo-config/delegation-service.conf</filePath>
+    </hudson.plugins.envfile.EnvFileBuildWrapper>
+  </buildWrappers>
+</project>

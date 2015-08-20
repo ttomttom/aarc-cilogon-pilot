@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <actions/>
+  <description>This task is meant to be called as part of another task, which we call the parent task. This parent often these parent tasks need a refreshed version of the trusted root and sub CAs in order to carry out some tests. For details on how this task has to be called see the "Trigger/call builds on other projects" section of certificates-master.update certificates.test. &#13;
+&#13;
+Acceptable calling parameters: &#13;
+&#13;
+TARGET_HOST=$NODE_NAME        (required)         The hostname of the parent task.&#13;
+&#13;
+Download the latest archived certificate bundle and copies the certificates directory to /etc/grid-security in the TARGET_HOST. The previous /etc/grid-security/certificates is deleted to avoid confusion.</description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.scm.NullSCM"/>
+  <assignedNode>master</assignedNode>
+  <canRoam>false</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.plugins.copyartifact.CopyArtifact plugin="copyartifact@1.35.2">
+      <project>certificates-master.inject-hostcert.old</project>
+      <filter>cert_testdir.tar.gz</filter>
+      <target>certificates-master.inject-hostcert.artifact/</target>
+      <excludes/>
+      <selector class="hudson.plugins.copyartifact.StatusBuildSelector"/>
+      <optional>true</optional>
+      <doNotFingerprintArtifacts>false</doNotFingerprintArtifacts>
+    </hudson.plugins.copyartifact.CopyArtifact>
+    <hudson.plugins.copyartifact.CopyArtifact plugin="copyartifact@1.35.2">
+      <project>certificates-master.create-root</project>
+      <filter>cert_testdir.tar.gz</filter>
+      <target>certificates-master.create-root.artifact/</target>
+      <excludes/>
+      <selector class="hudson.plugins.copyartifact.StatusBuildSelector"/>
+      <doNotFingerprintArtifacts>false</doNotFingerprintArtifacts>
+    </hudson.plugins.copyartifact.CopyArtifact>
+    <hudson.plugins.copyartifact.CopyArtifact plugin="copyartifact@1.35.2">
+      <project>certificates-master.create-certificate</project>
+      <filter>cert_testdir.tar.gz</filter>
+      <target>certificates-master.create-certificate.artifact/</target>
+      <excludes/>
+      <selector class="hudson.plugins.copyartifact.StatusBuildSelector"/>
+      <optional>true</optional>
+      <doNotFingerprintArtifacts>false</doNotFingerprintArtifacts>
+    </hudson.plugins.copyartifact.CopyArtifact>
+    <hudson.tasks.Shell>
+      <command>echo "[[:: Setting defaults ::]]"
+export TESTDIR=/tmp/cert_testdir
+
+echo "[[:: Target machine $TARGET_HOST ::]]"
+
+echo "[[:: Unpacking latest artifact ::]]"
+
+ROOT_PACK=certificates-master.create-root.artifact/cert_testdir.tar.gz
+INJ_CERT_PACK=certificates-master.inject-hostcert.artifact/cert_testdir.tar.gz
+CERT_PACK=certificates-master.create-certificate.artifact/cert_testdir.tar.gz
+
+mkdir -p artifacts
+
+if [ -f ${ROOT_PACK} ]; then
+    cp -p ${ROOT_PACK} artifacts/root_pack.tar.gz
+fi
+if [ -f ${INJ_CERT_PACK} ]; then
+    cp -p ${INJ_CERT_PACK} artifacts/inj_cert_pack.tar.gz
+fi
+if [ -f ${CERT_PACK} ]; then
+    cp -p ${CERT_PACK} artifacts/cert_pack.tar.gz
+fi
+
+NEWEST=`ls -t1 artifacts | head -n 1`
+rm -rf ${TESTDIR}
+tar xzf artifacts/${NEWEST} -C /tmp/
+
+echo "[[:: Copying lates certificates directory ::]]"
+
+ssh -o checkhostip=no -o stricthostkeychecking=no  jenkins@${TARGET_HOST} "rm -rf /tmp/certificates/ ; sudo rm -rf /etc/grid-security/certificates"
+scp -r -o checkhostip=no -o stricthostkeychecking=no -p  ${TESTDIR}/certificates jenkins@${TARGET_HOST}:/tmp/
+ssh -o checkhostip=no -o stricthostkeychecking=no  jenkins@${TARGET_HOST} "sudo cp -rf /tmp/certificates /etc/grid-security/"
+</command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers/>
+  <buildWrappers/>
+</project>

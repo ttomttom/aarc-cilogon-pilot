@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<scriptler plugin="scriptler@2.7">
+  <scriptSet class="sorted-set">
+    <comparator class="org.jvnet.hudson.plugins.scriptler.util.ByNameSorter"/>
+    <script>
+      <id>1.groovy</id>
+      <name>find-host-by-label</name>
+      <comment>Finds a running slave that matches the input labels</comment>
+      <parameters>
+        <parameter>
+          <name>KEYWORDS</name>
+          <value>&quot;&quot;</value>
+        </parameter>
+        <parameter>
+          <name>RETURNED_ENV_VARIALBE</name>
+          <value>FIND_HOST_BY_LABLE</value>
+        </parameter>
+      </parameters>
+      <available>true</available>
+      <nonAdministerUsing>true</nonAdministerUsing>
+      <onlyMaster>true</onlyMaster>
+    </script>
+  </scriptSet>
+  <disbableRemoteCatalog>true</disbableRemoteCatalog>
+  <allowRunScriptPermission>false</allowRunScriptPermission>
+  <allowRunScriptEdit>false</allowRunScriptEdit>
+</scriptler>

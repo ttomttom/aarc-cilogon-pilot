@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <actions/>
+  <description>Configure oa4mp client with a simple setup using file storage as backend. Every relevant server information is kept under /usr/www/client. Since this client has to be registered at the oa4mp-server some of the required fields are left unconfigured: id and secret. These two fields are provided upon registration and have to be filled in at /usr/www/client/conf/cfg.xml&#13;
+&#13;
+Accepted options:&#13;
+&#13;
+CLIENT_DIR                             (required) &#13;
+CLIENT_CONF_DIR                  (required)&#13;
+CLIENT_CONF_FILE                 (required)&#13;
+CLIENT_STORE_DIR                (required)&#13;
+CLIENT_LOG_DIR                    (required)&#13;
+CLIENT_KEYSTORE_PASS      (required)&#13;
+CLIENT_KEYSTORE                 (required)</description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.scm.NullSCM"/>
+  <assignedNode>oa4mp-client</assignedNode>
+  <canRoam>false</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.tasks.Shell>
+      <command># Modify tomcats web.xml to reference the ouath2 client config files in a ContextParameter
+
+if [ -z "`xmlstarlet sel -T -N x="http://java.sun.com/xml/ns/javaee" \
+         -t -i x:web-app/x:context-param -o exists ${CATALINA_HOME}/conf/web.xml`" ]; then
+
+        sudo xmlstarlet ed -L -N x="http://java.sun.com/xml/ns/javaee" -s /x:web-app -t elem -n file-context -v "" \
+                       -s //file-context -t elem -n param-name -v "oa4mp:oauth2.client.config.file" \
+                       -s //file-context -t elem -n param-value -v "${CLIENT_CONF_FILE}" \
+                       -r //file-context -v context-param \
+                       ${CATALINA_HOME}/conf/web.xml
+
+
+        sudo xmlstarlet ed -L -N x="http://java.sun.com/xml/ns/javaee" -s /x:web-app -t elem -n config-context -v "" \
+                       -s //config-context -t elem -n param-name -v "oa4mp:oauth2.client.config.name" \
+                       -s //config-context -t elem -n param-value -v "default" \
+                       -r //config-context -v context-param \
+                       ${CATALINA_HOME}/conf/web.xml
+
+        # for some reason the formatting command exists with a non-zero return value, triggering failure
+        sudo xmlstarlet fo -t -o ${CATALINA_HOME}/conf/web.xml &gt; /tmp/web.xml || echo "formating xml"
+        sudo mv /tmp/web.xml ${CATALINA_HOME}/conf/web.xml
+fi</command>
+    </hudson.tasks.Shell>
+    <org.jenkinsci.plugins.scriptler.builder.ScriptlerBuilder plugin="scriptler@2.7">
+      <builderId>1438941504256_18</builderId>
+      <scriptId>3.groovy</scriptId>
+      <propagateParams>false</propagateParams>
+      <parameters>
+        <org.jenkinsci.plugins.scriptler.config.Parameter>
+          <name>KEYWORDS</name>
+          <value>oa4mp-server</value>
+        </org.jenkinsci.plugins.scriptler.config.Parameter>
+        <org.jenkinsci.plugins.scriptler.config.Parameter>
+          <name>RETURNED_ENV_VARIALBE</name>
+          <value>OA4MP_SERVER_HOST</value>
+        </org.jenkinsci.plugins.scriptler.config.Parameter>
+      </parameters>
+    </org.jenkinsci.plugins.scriptler.builder.ScriptlerBuilder>
+    <hudson.tasks.Shell>
+      <command># find out the real hostname form the certificate that the remote server provides 
+# it is important to get the hostname right (without missing domain) otherwise
+# SSL is going to break
+echo "nothing" &gt; nothing
+OA4MP_SERVER="`openssl s_client -ign_eof -CApath /etc/grid-security/certificates/ \
+                   -connect ${OA4MP_SERVER_HOST}:443 &lt; nothing 2&gt;/dev/null  \
+                   | grep -A 1 '^Certificate chain$' | tail -n 1 | sed 's/.*CN=\(.*\)/\1/'`"       
+
+
+# recreate client configuration 
+sudo rm -rf "${CLIENT_DIR}"
+
+sudo mkdir -p "${CLIENT_CONF_DIR}"
+sudo mkdir -p "${CLIENT_STORE_DIR}"
+sudo mkdir -p "${CLIENT_LOG_DIR}"
+
+# create trust store including certificates from /etc/grid-security/certificates/
+for cert in /etc/grid-security/certificates/*.pem; do
+        echo Importing ... $cert
+        sudo keytool -importcert -noprompt -trustcacerts -file ${cert} \
+                -alias "${cert}" -keystore ${CLIENT_KEYSTORE} \
+                -storepass ${CLIENT_KEYSTORE_PASS}
+done
+
+sudo chmod 400 ${CLIENT_KEYSTORE}
+
+sudo rm -rf "${CLIENT_CONF_FILE}"
+sudo tee "${CLIENT_CONF_FILE}" &lt;&lt;EOF
+&lt;config&gt;
+
+    &lt;client name="default" alias="client-config"/&gt;
+
+    &lt;!-- ############################################################################## --&gt;
+
+    &lt;client name="client-config" address="https://${HOSTNAME}/client2"&gt;
+
+           &lt;logging
+                     logFileName="${CLIENT_LOG_DIR}/oa2-client.log"
+                     logName="oa2-client"
+                     logSize="1000000"
+                     logFileCount="2"
+                     debug="true"/&gt;
+
+           &lt;callbackUri&gt;https://${HOSTNAME}/client2/ready&lt;/callbackUri&gt;
+
+           &lt;serviceUri&gt;https://${OA4MP_SERVER}/oauth2&lt;/serviceUri&gt;
+
+           &lt;id&gt;FILLTHIS&lt;/id&gt;
+           &lt;secret&gt;FILLTHIS&lt;/secret&gt;
+
+
+           &lt;fileStore path="${CLIENT_STORE_DIR}"&gt;
+                      &lt;assetStore/&gt;
+           &lt;/fileStore&gt;
+
+           &lt;showRedirectPage&gt;true&lt;/showRedirectPage&gt;
+
+           &lt;keystore path="${CLIENT_KEYSTORE}"
+                     type="jks"
+                     password="changeit"
+                     factory="SunX509" /&gt;
+           
+    &lt;/client&gt;
+
+
+&lt;/config&gt;
+EOF
+
+sudo chown -R tomcat:tomcat "${CLIENT_DIR}"</command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers/>
+  <buildWrappers>
+    <hudson.plugins.envfile.EnvFileBuildWrapper plugin="envfile@1.2">
+      <filePath>/var/lib/jenkins/demo-config/demonstration-portal.conf</filePath>
+    </hudson.plugins.envfile.EnvFileBuildWrapper>
+  </buildWrappers>
+</project>

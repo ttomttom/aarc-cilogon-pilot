@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <actions/>
+  <description>This tasks automatically approves every pending client request.</description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.scm.NullSCM"/>
+  <assignedNode>oa4mp-server</assignedNode>
+  <canRoam>false</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.tasks.Shell>
+      <command>for client in ${SERVER_STORE_DIR}/clients/dataPath/*; do 
+    
+     client_file=`basename ${client}`
+
+     if [ ! -f "${SERVER_STORE_DIR}/clientApprovals/dataPath/${client_file}" ]; then
+     
+           TIMESTAMP="`date -u +%Y-%m-%dT%H:%M:%S.000Z`"
+           CLIENT_ID="`xmlstarlet sel -T -t -v "properties/entry[@key='client_id']" ${client}`"
+
+           sudo tee "${SERVER_STORE_DIR}/clientApprovals/dataPath/${client_file}" &lt;&lt;EOF
+&lt;?xml version="1.0" encoding="UTF-8" standalone="no"?&gt;
+&lt;!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd"&gt;
+&lt;properties&gt;
+&lt;comment&gt;OA4MP stream store&lt;/comment&gt;
+&lt;entry key="approval_ts"&gt;${TIMESTAMP}&lt;/entry&gt;
+&lt;entry key="approver"&gt;admin&lt;/entry&gt;
+&lt;entry key="approved"&gt;true&lt;/entry&gt;
+&lt;entry key="client_id"&gt;${CLIENT_ID}&lt;/entry&gt;
+&lt;/properties&gt;
+EOF
+
+     fi
+
+done</command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers/>
+  <buildWrappers>
+    <EnvInjectBuildWrapper plugin="envinject@1.91.2">
+      <info>
+        <propertiesContent>SERVER_DIR=/var/www/server
+SERVER_CONF_DIR=${SERVER_DIR}/conf
+SERVER_CONF_FILE=${SERVER_CONF_DIR}/cfg.xml
+SERVER_STORE_DIR=${SERVER_DIR}/storage
+SERVER_LOG_DIR=${SERVER_DIR}/log</propertiesContent>
+        <loadFilesFromMaster>false</loadFilesFromMaster>
+      </info>
+    </EnvInjectBuildWrapper>
+  </buildWrappers>
+</project>
