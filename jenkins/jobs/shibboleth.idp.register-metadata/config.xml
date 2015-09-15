@@ -1,9 +1,10 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <project>
   <actions/>
   <description>Dowloads the SP Metadata into the Shibboleth IdP and registeres it.</description>
   <keepDependencies>false</keepDependencies>
-  <properties/>
+  <properties>
+  </properties>
   <scm class="hudson.scm.NullSCM"/>
   <assignedNode>idp</assignedNode>
   <canRoam>false</canRoam>
@@ -31,26 +32,26 @@
     <hudson.tasks.Shell>
       <command>SP_METADATA_ENDPOINT=https://${SHIBBOLETH_SP_HOST}/Shibboleth.sso/Metadata
 
-if [ -z "${SP_METADATA_ENDPOINT}" ]; then
-    echo 'No SP metadata endpoint specified!'
+if [ -z &quot;${SP_METADATA_ENDPOINT}&quot; ]; then
+    echo &apos;No SP metadata endpoint specified!&apos;
     exit 1
 fi
 
-SHIB_SP_METADATA="/opt/shibboleth-idp/metadata/sp-metadata.xml"
-SHIB_METADATA_CONFIG="/opt/shibboleth-idp/conf/metadata-providers.xml"
+SHIB_SP_METADATA=&quot;/opt/shibboleth-idp/metadata/sp-metadata.xml&quot;
+SHIB_METADATA_CONFIG=&quot;/opt/shibboleth-idp/conf/metadata-providers.xml&quot;
 
 # download metadata
-sudo wget -q --no-check-certificate "${SP_METADATA_ENDPOINT}" -O ${SHIB_SP_METADATA}
-if [ -z "`sudo xmlstarlet sel -T -N x="urn:mace:shibboleth:2.0:metadata" \
-          -t -i "/x:MetadataProvider/x:MetadataProvider[@metadataFile='${SHIB_SP_METADATA}']" \
-          -o exists ${SHIB_METADATA_CONFIG}`" ]; then
+sudo wget -q --no-check-certificate &quot;${SP_METADATA_ENDPOINT}&quot; -O ${SHIB_SP_METADATA}
+if [ -z &quot;`sudo xmlstarlet sel -T -N x=&quot;urn:mace:shibboleth:2.0:metadata&quot; \
+          -t -i &quot;/x:MetadataProvider/x:MetadataProvider[@metadataFile=&apos;${SHIB_SP_METADATA}&apos;]&quot; \
+          -o exists ${SHIB_METADATA_CONFIG}`&quot; ]; then
 
-        sudo xmlstarlet ed -L -N x="urn:mace:shibboleth:2.0:metadata" \
-                -s "/x:MetadataProvider" --type elem -n "InnerMetadataProvider" \
-                -s //InnerMetadataProvider --type attr -n "id" -v "LocalMetadata" \
-                -s //InnerMetadataProvider --type attr -n "xsi:type" -v "FilesystemMetadataProvider" \
-                -s //InnerMetadataProvider --type attr -n "metadataFile" -v "${SHIB_SP_METADATA}" \
-                -r //InnerMetadataProvider -v "MetadataProvider" ${SHIB_METADATA_CONFIG}
+        sudo xmlstarlet ed -L -N x=&quot;urn:mace:shibboleth:2.0:metadata&quot; \
+                -s &quot;/x:MetadataProvider&quot; --type elem -n &quot;InnerMetadataProvider&quot; \
+                -s //InnerMetadataProvider --type attr -n &quot;id&quot; -v &quot;LocalMetadata&quot; \
+                -s //InnerMetadataProvider --type attr -n &quot;xsi:type&quot; -v &quot;FilesystemMetadataProvider&quot; \
+                -s //InnerMetadataProvider --type attr -n &quot;metadataFile&quot; -v &quot;${SHIB_SP_METADATA}&quot; \
+                -r //InnerMetadataProvider -v &quot;MetadataProvider&quot; ${SHIB_METADATA_CONFIG}
 
 fi
 </command>

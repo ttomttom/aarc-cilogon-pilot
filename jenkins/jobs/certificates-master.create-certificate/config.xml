@@ -1,18 +1,18 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <project>
   <actions/>
-  <description>This task is meant to be called as part of another task, which we call the parent task. This parent task is usually intended for setting up a testing node that requires a cetificate. For details on how this task has to be called see the "Trigger/call builds on other projects" section of certificates-master.create-certificate.test. Acceptable calling parameters:&#13;
-&#13;
-&#13;
-CN=(string)                    (required)     The CN that the certificate should take&#13;
-SUB_CA=(string)            (optional)      An alias for the sub CA you want to create&#13;
-SUB_CA_CN=(string)     (optional)      The CN of the sub CA you want to create&#13;
-EMAIL=(string)               (optional)      Email address to add to the certificate&#13;
-&#13;
-Note : By default the new host certificate is signed with rootCA. If you want to create and use an intermediate sub CA instead, you must specify both SUB_CA_CN and SUB_CA! In case the specified SUB_CA is recognized as previously created no new sub CA will be created, instead the old one gets reused. This means that it is safe to pass 'rootCA' as SUB_CA, because this will have the same effect as not passing any SUB_CA value. &#13;
-&#13;
-Downloads the latest certificate bundle archived, and a new certificate is created. Unlike certificate-master.inject-certificate, this task does not copy the newly created certificate, only archives it. The parent task is required to copy the latest artifact of this task. The new certificate can be found in the artifact tarball under cert_testdir/${SUB_CA:-rootCA}/aliases/C=NL,O=Example,OU=PDP,CN=${CN}.crt / .key &#13;
-&#13;
+  <description>This task is meant to be called as part of another task, which we call the parent task. This parent task is usually intended for setting up a testing node that requires a cetificate. For details on how this task has to be called see the &quot;Trigger/call builds on other projects&quot; section of certificates-master.create-certificate.test. Acceptable calling parameters:&#xd;
+&#xd;
+&#xd;
+CN=(string)                    (required)     The CN that the certificate should take&#xd;
+SUB_CA=(string)            (optional)      An alias for the sub CA you want to create&#xd;
+SUB_CA_CN=(string)     (optional)      The CN of the sub CA you want to create&#xd;
+EMAIL=(string)               (optional)      Email address to add to the certificate&#xd;
+&#xd;
+Note : By default the new host certificate is signed with rootCA. If you want to create and use an intermediate sub CA instead, you must specify both SUB_CA_CN and SUB_CA! In case the specified SUB_CA is recognized as previously created no new sub CA will be created, instead the old one gets reused. This means that it is safe to pass &apos;rootCA&apos; as SUB_CA, because this will have the same effect as not passing any SUB_CA value. &#xd;
+&#xd;
+Downloads the latest certificate bundle archived, and a new certificate is created. Unlike certificate-master.inject-certificate, this task does not copy the newly created certificate, only archives it. The parent task is required to copy the latest artifact of this task. The new certificate can be found in the artifact tarball under cert_testdir/${SUB_CA:-rootCA}/aliases/C=NL,O=Example,OU=PDP,CN=${CN}.crt / .key &#xd;
+&#xd;
 Limitations:  no email address is added to the created certs by default, so we complete openssl.cnf with a static email address</description>
   <keepDependencies>false</keepDependencies>
   <properties>
@@ -27,17 +27,17 @@ Limitations:  no email address is added to the created certs by default, so we c
     <locations>
       <hudson.scm.SubversionSCM_-ModuleLocation>
         <remote>http://ndpfsvn.nikhef.nl/ro/mwsec/trunk/mwsec-utils/certificate_tester</remote>
-        <credentialsId/>
+        <credentialsId></credentialsId>
         <local>.</local>
         <depthOption>infinity</depthOption>
         <ignoreExternalsOption>true</ignoreExternalsOption>
       </hudson.scm.SubversionSCM_-ModuleLocation>
     </locations>
-    <excludedRegions/>
-    <includedRegions/>
-    <excludedUsers/>
-    <excludedRevprop/>
-    <excludedCommitMessages/>
+    <excludedRegions></excludedRegions>
+    <includedRegions></includedRegions>
+    <excludedUsers></excludedUsers>
+    <excludedRevprop></excludedRevprop>
+    <excludedCommitMessages></excludedCommitMessages>
     <workspaceUpdater class="hudson.scm.subversion.CheckoutUpdater"/>
     <ignoreDirPropChanges>false</ignoreDirPropChanges>
     <filterChangelog>false</filterChangelog>
@@ -54,7 +54,7 @@ Limitations:  no email address is added to the created certs by default, so we c
       <project>certificates-master.create-root</project>
       <filter>cert_testdir.tar.gz</filter>
       <target>certificates-master.create-root.artifact/</target>
-      <excludes/>
+      <excludes></excludes>
       <selector class="hudson.plugins.copyartifact.StatusBuildSelector"/>
       <doNotFingerprintArtifacts>false</doNotFingerprintArtifacts>
     </hudson.plugins.copyartifact.CopyArtifact>
@@ -62,7 +62,7 @@ Limitations:  no email address is added to the created certs by default, so we c
       <project>certificates-master.inject-hostcert.old</project>
       <filter>cert_testdir.tar.gz</filter>
       <target>certificates-master.inject-hostcert.artifact/</target>
-      <excludes/>
+      <excludes></excludes>
       <selector class="hudson.plugins.copyartifact.StatusBuildSelector"/>
       <optional>true</optional>
       <doNotFingerprintArtifacts>false</doNotFingerprintArtifacts>
@@ -71,25 +71,25 @@ Limitations:  no email address is added to the created certs by default, so we c
       <project>certificates-master.create-certificate</project>
       <filter>cert_testdir.tar.gz</filter>
       <target>certificates-master.create-certificate.artifact/</target>
-      <excludes/>
+      <excludes></excludes>
       <selector class="hudson.plugins.copyartifact.StatusBuildSelector"/>
       <optional>true</optional>
       <doNotFingerprintArtifacts>false</doNotFingerprintArtifacts>
     </hudson.plugins.copyartifact.CopyArtifact>
     <hudson.tasks.Shell>
-      <command>echo "[[:: Setting defaults ::]]"
+      <command>echo &quot;[[:: Setting defaults ::]]&quot;
 export ca_pass=test
-export default_oid="1.2.840.113612.5.2.2.1"
+export default_oid=&quot;1.2.840.113612.5.2.2.1&quot;
 export CONFDIR=`pwd`
 export TESTDIR=/tmp/cert_testdir
 #export EMAIL=${EMAIL:-noone@nowhere.no}
 
-if [ -z "${CN}" ]; then
-    echo 'PLEASE PROVIDE A CN!'
+if [ -z &quot;${CN}&quot; ]; then
+    echo &apos;PLEASE PROVIDE A CN!&apos;
     exit 1  
 fi
 
-echo "[[:: Unpacking latest artifact ::]]"
+echo &quot;[[:: Unpacking latest artifact ::]]&quot;
 
 ROOT_PACK=certificates-master.create-root.artifact/cert_testdir.tar.gz
 INJ_CERT_PACK=certificates-master.inject-hostcert.artifact/cert_testdir.tar.gz
@@ -97,13 +97,13 @@ CERT_PACK=certificates-master.create-certificate.artifact/cert_testdir.tar.gz
 
 mkdir -p artifacts
 
-if [ -f "${ROOT_PACK}" ]; then
+if [ -f &quot;${ROOT_PACK}&quot; ]; then
     cp -p ${ROOT_PACK} artifacts/root_pack.tar.gz
 fi
-if [ -f "${INJ_CERT_PACK}" ]; then
+if [ -f &quot;${INJ_CERT_PACK}&quot; ]; then
     cp -p ${INJ_CERT_PACK} artifacts/inj_cert_pack.tar.gz
 fi
-if [ -f "${CERT_PACK}" ]; then
+if [ -f &quot;${CERT_PACK}&quot; ]; then
     cp -p ${CERT_PACK} artifacts/cert_pack.tar.gz
 fi
 
@@ -111,36 +111,36 @@ NEWEST=`ls -t1 artifacts | head -n 1`
 rm -rf ${TESTDIR}
 tar xzf artifacts/${NEWEST} -C /tmp/
 
-if [ -f "${TESTDIR}/aliases/${CN}.cert" ]; then
-     echo "Certificate with CN = ${CN} already exists!"
+if [ -f &quot;${TESTDIR}/aliases/${CN}.cert&quot; ]; then
+     echo &quot;Certificate with CN = ${CN} already exists!&quot;
      cp artifacts/${NEWEST} cert_testdir.tar.gz
      exit 0
 fi 
 
 pushd ${CONFDIR}
 
-if [ -n "${EMAIL}" ]; then 
-     sed -i "s/\[\ user_extensions\ \]/[ user_extensions ]\nsubjectAltName=email:${EMAIL}/" openssl.cnf
+if [ -n &quot;${EMAIL}&quot; ]; then 
+     sed -i &quot;s/\[\ user_extensions\ \]/[ user_extensions ]\nsubjectAltName=email:${EMAIL}/&quot; openssl.cnf
 fi
 source ./functions
 
-echo "[[:: Creating certificate for $CN ::]]"
+echo &quot;[[:: Creating certificate for $CN ::]]&quot;
 
 CA=${SUB_CA:-rootCA}
 if [ ! -d ${TESTDIR}/${CA} ]; then
-    echo "[[:: Creating sub CA $CA ::]]"
-    create_sub_ca ca=rootCA subca="${CA}" cn="${CA}"
+    echo &quot;[[:: Creating sub CA $CA ::]]&quot;
+    create_sub_ca ca=rootCA subca=&quot;${CA}&quot; cn=&quot;${CA}&quot;
 fi
 
-if [ -z "`ls ${TESTDIR}/${CA}/aliases/*CN="${CN}".crt`" ]; then
-    create_cert cn="$CN" ca="$CA" nodes
+if [ -z &quot;`ls ${TESTDIR}/${CA}/aliases/*CN=&quot;${CN}&quot;.crt`&quot; ]; then
+    create_cert cn=&quot;$CN&quot; ca=&quot;$CA&quot; nodes
 else
-    echo "[[:: Certificate with CA:$CA and CN:$CN already exists ::]]"
+    echo &quot;[[:: Certificate with CA:$CA and CN:$CN already exists ::]]&quot;
 fi
 
 popd
 
-echo "[[:: Packaging artifact ::]]"
+echo &quot;[[:: Packaging artifact ::]]&quot;
 
 tar czfp cert_testdir.tar.gz -C /tmp/ cert_testdir
 

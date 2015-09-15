@@ -1,9 +1,10 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <project>
   <actions/>
   <description>Set up environment for OA4MP server. This includes setting up the tomcat container (by calling either tomcat-ssl or tomacat-httpd), and installing dependencies (java mail, jglobus)</description>
   <keepDependencies>false</keepDependencies>
-  <properties/>
+  <properties>
+  </properties>
   <scm class="hudson.scm.NullSCM"/>
   <assignedNode>oa4mp-server</assignedNode>
   <canRoam>false</canRoam>
@@ -52,16 +53,16 @@
     <hudson.tasks.Shell>
       <command># Installing Java Mail 1.5.4
 
-if [ -z "`find ${CATALINA_HOME}/lib -type f -name javax.mail.jar`" ]; then
+if [ -z &quot;`find ${CATALINA_HOME}/lib -type f -name javax.mail.jar`&quot; ]; then
 
      wget -q http://java.net/projects/javamail/downloads/download/javax.mail.jar
      sudo cp javax.mail.jar ${CATALINA_HOME}/lib/
 
-     if [ -z "`xmlstarlet sel -T  -t -i /Context/Resource -o exists ${CATALINA_HOME}/conf/context.xml`" ]; then 
-            sudo xmlstarlet ed -L -s /Context -t elem -n Resource -v "" \
-                                  -i //Resource -t attr -n "name" -v "mail/Session" \
-                                  -i //Resource -t attr -n "type" -v "javax.mail.Session" \
-                                  -i //Resource -t attr -n "auth" -v "Container" \
+     if [ -z &quot;`xmlstarlet sel -T  -t -i /Context/Resource -o exists ${CATALINA_HOME}/conf/context.xml`&quot; ]; then 
+            sudo xmlstarlet ed -L -s /Context -t elem -n Resource -v &quot;&quot; \
+                                  -i //Resource -t attr -n &quot;name&quot; -v &quot;mail/Session&quot; \
+                                  -i //Resource -t attr -n &quot;type&quot; -v &quot;javax.mail.Session&quot; \
+                                  -i //Resource -t attr -n &quot;auth&quot; -v &quot;Container&quot; \
                                   ${CATALINA_HOME}/conf/context.xml
      fi
 
@@ -83,8 +84,8 @@ sudo yum -y install jglobus-jsse globus-ssl-proxies</command>
   <buildWrappers>
     <hudson.plugins.ws__cleanup.PreBuildCleanup plugin="ws-cleanup@0.26">
       <deleteDirs>false</deleteDirs>
-      <cleanupParameter/>
-      <externalDelete/>
+      <cleanupParameter></cleanupParameter>
+      <externalDelete></externalDelete>
     </hudson.plugins.ws__cleanup.PreBuildCleanup>
   </buildWrappers>
 </project>

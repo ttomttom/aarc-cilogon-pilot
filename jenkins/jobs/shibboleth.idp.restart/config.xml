@@ -1,9 +1,10 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <project>
   <actions/>
   <description>Restarts the shibboleth IdP service container (tomcat)</description>
   <keepDependencies>false</keepDependencies>
-  <properties/>
+  <properties>
+  </properties>
   <scm class="hudson.scm.NullSCM"/>
   <assignedNode>idp</assignedNode>
   <canRoam>false</canRoam>
@@ -16,7 +17,7 @@
     <hudson.tasks.Shell>
       <command># restart service 
 
-sudo service tomcat stop || echo 'stopped?'
+sudo service tomcat stop || echo &apos;stopped?&apos;
 sleep 10
 sudo service tomcat start
 </command>

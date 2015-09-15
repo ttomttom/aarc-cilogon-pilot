@@ -1,18 +1,17 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <project>
   <actions/>
-  <description>Adds a dummy user account for testing into LDAP. Makes sure that the dummy account has every relevant field which is required later on by the shibboleth attribute-releas.xml (uid,cn,mail)&#13;
-&#13;
-Accepted options:&#13;
-&#13;
-LDAP_ADMIN_PW                    (optional)    changeit&#13;
-LDAP_BIND_DN                       (optional)    cn=Manager,dc=my-domain,dc=com&#13;
-DUMMY_PASSWORD              (optional)    dummy&#13;
+  <description>Adds a dummy user account for testing into LDAP. Makes sure that the dummy account has every relevant field which is required later on by the shibboleth attribute-releas.xml (uid,cn,mail)&#xd;
+&#xd;
+Accepted options:&#xd;
+&#xd;
+LDAP_ADMIN_PW                    (optional)    changeit&#xd;
+LDAP_BIND_DN                       (optional)    cn=Manager,dc=my-domain,dc=com&#xd;
+DUMMY_PASSWORD              (optional)    dummy&#xd;
 DUMMY_USERNAME               (optional)    dummy</description>
   <keepDependencies>false</keepDependencies>
-  <properties/>
-  <scm class="hudson.scm.NullSCM"/>
-  <assignedNode>idp</assignedNode>
+  <properties>
+  <assignedNode>ldap-server</assignedNode>
   <canRoam>false</canRoam>
   <disabled>false</disabled>
   <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
@@ -56,7 +55,7 @@ eduPersonPrimaryOrgUnitDN: ou=people,dc=my-domain,dc=com
 EOF
 
 
-ldapadd -x -w ${LDAP_ADMIN_PW} -D "${LDAP_BIND_DN}" -f dummy.ldif  || if [ $? -ne 68 ]; then  exit 1; fi</command>
+ldapadd -x -w ${LDAP_ADMIN_PW} -D &quot;${LDAP_BIND_DN}&quot; -f dummy.ldif  || if [ $? -ne 68 ]; then  exit 1; fi</command>
     </hudson.tasks.Shell>
   </builders>
   <publishers/>

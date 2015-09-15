@@ -1,20 +1,19 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <project>
   <actions/>
-  <description>Installs and configures OpenLDAP &#13;
-&#13;
-Configures LDAP to be used as backend for the IdP by filling in the shibboleth LDAP configuration file (ldap.properties)&#13;
-Loads relevant LDAP schemas (including eduPerson 201310)&#13;
-&#13;
-Accepted options:&#13;
-&#13;
-LDAP_ADMIN_PW                    (optional)    changeit&#13;
-LDAP_SEARCH_BASE_DN      (optional)    ou=people,dc=my-domain,dc=com&#13;
+  <description>Installs and configures OpenLDAP &#xd;
+&#xd;
+Configures LDAP to be used as backend for the IdP by filling in the shibboleth LDAP configuration file (ldap.properties)&#xd;
+Loads relevant LDAP schemas (including eduPerson 201310)&#xd;
+&#xd;
+Accepted options:&#xd;
+&#xd;
+LDAP_ADMIN_PW                    (optional)    changeit&#xd;
+LDAP_SEARCH_BASE_DN      (optional)    ou=people,dc=my-domain,dc=com&#xd;
 LDAP_BIND_DN                       (optional)    cn=Manager,dc=my-domain,dc=com</description>
   <keepDependencies>false</keepDependencies>
-  <properties/>
-  <scm class="hudson.scm.NullSCM"/>
-  <assignedNode>idp</assignedNode>
+  <properties>
+  <assignedNode>ldap-server</assignedNode>
   <canRoam>false</canRoam>
   <disabled>false</disabled>
   <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
@@ -27,65 +26,64 @@ LDAP_BIND_DN                       (optional)    cn=Manager,dc=my-domain,dc=com<
 LDAP_BIND_DN=${LDAP_BIND_DN:-cn=Manager,dc=my-domain,dc=com}
 LDAP_SEARCH_BASE_DN=${LDAP_SEARCH_BASE_DN:-ou=people,dc=my-domain,dc=com}
 
-LDAP_CERT="/etc/openldap/certs/ldapcert.pem"
-LDAP_KEY="/etc/openldap/certs/ldapkey.pem"
-LDAP_CONF="/etc/openldap/slapd.d/cn=config.ldif"
-LDAP_CONF_DB="/etc/openldap/slapd.d/cn=config/olcDatabase={2}hdb.ldif"
-LDAP_CONF_DB_MON="/etc/openldap/slapd.d/cn=config/olcDatabase={1}monitor.ldif"
-SHIB_LDAP_CONFIG="/opt/shibboleth-idp/conf/ldap.properties" 
+LDAP_CERT=&quot;/etc/openldap/certs/ldapcert.pem&quot;
+LDAP_KEY=&quot;/etc/openldap/certs/ldapkey.pem&quot;
+LDAP_CONF=&quot;/etc/openldap/slapd.d/cn=config.ldif&quot;
+LDAP_CONF_DB=&quot;/etc/openldap/slapd.d/cn=config/olcDatabase={2}hdb.ldif&quot;
+LDAP_CONF_DB_MON=&quot;/etc/openldap/slapd.d/cn=config/olcDatabase={1}monitor.ldif&quot;
+SHIB_LDAP_CONFIG=&quot;/opt/shibboleth-idp/conf/ldap.properties&quot; 
 
 ##############################################################################################
 
-sudo yum -y install openldap openldap-clients openldap-servers
 
 # generate self signed certificate for ldap. shibboleth-idp will have to trust this
 sudo openssl req -newkey rsa:2048 -x509 -nodes -out ${LDAP_CERT} -keyout ${LDAP_KEY} -days 365 \
-        -subj "/C=NL/L=Example/O=LDAP Server/CN=`hostname`"
+        -subj &quot;/C=NL/L=Example/O=LDAP Server/CN=`hostname`&quot;
 sudo chmod 600 ${LDAP_CERT}
 sudo chmod 400 ${LDAP_KEY}
 sudo chown ldap:ldap ${LDAP_CERT} ${LDAP_KEY}
 
 # configure ldap server certificate
-sudo sed -i "s#olcTLSCertificateFile:.*#olcTLSCertificateFile: ${LDAP_CERT}#"  ${LDAP_CONF}
-sudo sed -i "s#olcTLSCertificateKeyFile:.*#olcTLSCertificateKeyFile: ${LDAP_KEY}#"  ${LDAP_CONF}
-sudo sed -i '/^#.*/d' ${LDAP_CONF}
+sudo sed -i &quot;s#olcTLSCertificateFile:.*#olcTLSCertificateFile: ${LDAP_CERT}#&quot;  ${LDAP_CONF}
+sudo sed -i &quot;s#olcTLSCertificateKeyFile:.*#olcTLSCertificateKeyFile: ${LDAP_KEY}#&quot;  ${LDAP_CONF}
+sudo sed -i &apos;/^#.*/d&apos; ${LDAP_CONF}
 
 # configure admin user
 LDAP_ADMIN_PW_HASH=`slappasswd -s ${LDAP_ADMIN_PW}`
-if [ -z "`sudo grep '^olcRootPW' ${LDAP_CONF_DB}`" ]; then
-    echo "olcRootPW: ${LDAP_ADMIN_PW_HASH}" | sudo tee -a ${LDAP_CONF_DB}
+if [ -z &quot;`sudo grep &apos;^olcRootPW&apos; ${LDAP_CONF_DB}`&quot; ]; then
+    echo &quot;olcRootPW: ${LDAP_ADMIN_PW_HASH}&quot; | sudo tee -a ${LDAP_CONF_DB}
 else
-    sudo sed -i "s;^#*olcRootPW:.*;olcRootPW: ${LDAP_ADMIN_PW_HASH};" ${LDAP_CONF_DB}
+    sudo sed -i &quot;s;^#*olcRootPW:.*;olcRootPW: ${LDAP_ADMIN_PW_HASH};&quot; ${LDAP_CONF_DB}
 fi
 
-if [ "${LDAP_BIND_DN}" != "`sudo grep olcRootDN:  "${LDAP_CONF_DB}" | cut -d ':' -f 2 | tr -d ' '`" ]; then
-    sudo sed -i "s/^#*olcRootDN:.*/olcRootDN: ${LDAP_BIND_DN}/" ${LDAP_CONF_DB}
-    sudo sed -i "s/read by dn.base=\".*\"/read by dn.base=\"${LDAP_BIND_DN}\" /" ${LDAP_CONF_DB_MON}
+if [ &quot;${LDAP_BIND_DN}&quot; != &quot;`sudo grep olcRootDN:  &quot;${LDAP_CONF_DB}&quot; | cut -d &apos;:&apos; -f 2 | tr -d &apos; &apos;`&quot; ]; then
+    sudo sed -i &quot;s/^#*olcRootDN:.*/olcRootDN: ${LDAP_BIND_DN}/&quot; ${LDAP_CONF_DB}
+    sudo sed -i &quot;s/read by dn.base=\&quot;.*\&quot;/read by dn.base=\&quot;${LDAP_BIND_DN}\&quot; /&quot; ${LDAP_CONF_DB_MON}
 fi
 
-sudo sed -i '/^#.*/d' ${LDAP_CONF_DB}
+sudo sed -i &apos;/^#.*/d&apos; ${LDAP_CONF_DB}
 
 # start service 
-sudo service slapd stop || echo 'stopped?'
+sudo service slapd stop || echo &apos;stopped?&apos;
 sleep 10
 sudo service slapd start
 
 ##############################################################################################
 
 # copy ldap certificate into shibboleth trusted cert
-sudo \cp -fp "${LDAP_CERT}" /opt/shibboleth-idp/credentials/ldap-server.crt
+sudo \cp -fp &quot;${LDAP_CERT}&quot; /opt/shibboleth-idp/credentials/ldap-server.crt
 sudo chown tomcat:tomcat /opt/shibboleth-idp/credentials/ldap-server.crt
 
 # change ldap configuration to match setup
-sudo sed -i "s/^#*idp.authn.LDAP.authenticator.*/idp.authn.LDAP.authenticator = anonSearchAuthenticator/" ${SHIB_LDAP_CONFIG}
-sudo sed -i "s/^#*idp.authn.LDAP.ldapURL.*/idp.authn.LDAP.ldapURL = ldap:\/\/`hostname`:389/" ${SHIB_LDAP_CONFIG}
-sudo sed -i "s/^#*idp.authn.LDAP.useStartTLS.*/idp.authn.LDAP.useStartTLS = true/" ${SHIB_LDAP_CONFIG}
-sudo sed -i "s/^#*idp.authn.LDAP.useSSL.*/idp.authn.LDAP.useSSL = false/" ${SHIB_LDAP_CONFIG}
-sudo sed -i "s/^#*idp.authn.LDAP.sslConfig.*/idp.authn.LDAP.sslConfig = certificateTrust/" ${SHIB_LDAP_CONFIG}
-sudo sed -i "s/^#*idp.authn.LDAP.returnAttributes.*/idp.authn.LDAP.returnAttributes = uid,cn,mail/" ${SHIB_LDAP_CONFIG}
-sudo sed -i "s/^#*idp.authn.LDAP.baseDN.*/idp.authn.LDAP.baseDN = ${LDAP_SEARCH_BASE_DN}/" ${SHIB_LDAP_CONFIG}
-sudo sed -i "s/^#*idp.authn.LDAP.bindDN\s*=.*/idp.authn.LDAP.bindDN = ${LDAP_BIND_DN}/" ${SHIB_LDAP_CONFIG}
-sudo sed -i "s/^#*idp.authn.LDAP.bindDNCredential.*/idp.authn.LDAP.bindDNCredential = ${LDAP_ADMIN_PW}/" ${SHIB_LDAP_CONFIG}
+sudo sed -i &quot;s/^#*idp.authn.LDAP.authenticator.*/idp.authn.LDAP.authenticator = anonSearchAuthenticator/&quot; ${SHIB_LDAP_CONFIG}
+sudo sed -i &quot;s/^#*idp.authn.LDAP.ldapURL.*/idp.authn.LDAP.ldapURL = ldap:\/\/`hostname`:389/&quot; ${SHIB_LDAP_CONFIG}
+sudo sed -i &quot;s/^#*idp.authn.LDAP.useStartTLS.*/idp.authn.LDAP.useStartTLS = true/&quot; ${SHIB_LDAP_CONFIG}
+sudo sed -i &quot;s/^#*idp.authn.LDAP.useSSL.*/idp.authn.LDAP.useSSL = false/&quot; ${SHIB_LDAP_CONFIG}
+sudo sed -i &quot;s/^#*idp.authn.LDAP.sslConfig.*/idp.authn.LDAP.sslConfig = certificateTrust/&quot; ${SHIB_LDAP_CONFIG}
+sudo sed -i &quot;s/^#*idp.authn.LDAP.returnAttributes.*/idp.authn.LDAP.returnAttributes = uid,cn,mail/&quot; ${SHIB_LDAP_CONFIG}
+sudo sed -i &quot;s/^#*idp.authn.LDAP.baseDN.*/idp.authn.LDAP.baseDN = ${LDAP_SEARCH_BASE_DN}/&quot; ${SHIB_LDAP_CONFIG}
+sudo sed -i &quot;s/^#*idp.authn.LDAP.bindDN\s*=.*/idp.authn.LDAP.bindDN = ${LDAP_BIND_DN}/&quot; ${SHIB_LDAP_CONFIG}
+sudo sed -i &quot;s/^#*idp.authn.LDAP.bindDNCredential.*/idp.authn.LDAP.bindDNCredential = ${LDAP_ADMIN_PW}/&quot; ${SHIB_LDAP_CONFIG}
 
 </command>
     </hudson.tasks.Shell>
@@ -100,48 +98,48 @@ dn: cn=eduperson,cn=schema,cn=config
 changetype: add
 objectClass: olcSchemaConfig
 cn: eduperson
-olcAttributeTypes: {0}( 1.3.6.1.4.1.5923.1.1.1.1 NAME 'eduPersonAffiliation' D
- ESC 'eduPerson per Internet2 and EDUCAUSE' EQUALITY caseIgnoreMatch SUBSTR ca
+olcAttributeTypes: {0}( 1.3.6.1.4.1.5923.1.1.1.1 NAME &apos;eduPersonAffiliation&apos; D
+ ESC &apos;eduPerson per Internet2 and EDUCAUSE&apos; EQUALITY caseIgnoreMatch SUBSTR ca
  seIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
-olcAttributeTypes: {1}( 1.3.6.1.4.1.5923.1.1.1.2 NAME 'eduPersonNickname' DESC
-  'eduPerson per Internet2 and EDUCAUSE' EQUALITY caseIgnoreMatch SUBSTR caseI
+olcAttributeTypes: {1}( 1.3.6.1.4.1.5923.1.1.1.2 NAME &apos;eduPersonNickname&apos; DESC
+  &apos;eduPerson per Internet2 and EDUCAUSE&apos; EQUALITY caseIgnoreMatch SUBSTR caseI
  gnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )
-olcAttributeTypes: {2}( 1.3.6.1.4.1.5923.1.1.1.3 NAME 'eduPersonOrgDN' DESC 'e
- duPerson per Internet2 and EDUCAUSE' EQUALITY distinguishedNameMatch SYNTAX 1
+olcAttributeTypes: {2}( 1.3.6.1.4.1.5923.1.1.1.3 NAME &apos;eduPersonOrgDN&apos; DESC &apos;e
+ duPerson per Internet2 and EDUCAUSE&apos; EQUALITY distinguishedNameMatch SYNTAX 1
  .3.6.1.4.1.1466.115.121.1.12 SINGLE-VALUE )
-olcAttributeTypes: {3}( 1.3.6.1.4.1.5923.1.1.1.4 NAME 'eduPersonOrgUnitDN' DES
- C 'eduPerson per Internet2 and EDUCAUSE' EQUALITY distinguishedNameMatch SYNT
+olcAttributeTypes: {3}( 1.3.6.1.4.1.5923.1.1.1.4 NAME &apos;eduPersonOrgUnitDN&apos; DES
+ C &apos;eduPerson per Internet2 and EDUCAUSE&apos; EQUALITY distinguishedNameMatch SYNT
  AX 1.3.6.1.4.1.1466.115.121.1.12 )
-olcAttributeTypes: {4}( 1.3.6.1.4.1.5923.1.1.1.5 NAME 'eduPersonPrimaryAffilia
- tion' DESC 'eduPerson per Internet2 and EDUCAUSE' EQUALITY caseIgnoreMatch SU
+olcAttributeTypes: {4}( 1.3.6.1.4.1.5923.1.1.1.5 NAME &apos;eduPersonPrimaryAffilia
+ tion&apos; DESC &apos;eduPerson per Internet2 and EDUCAUSE&apos; EQUALITY caseIgnoreMatch SU
  BSTR caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 SINGLE-VA
  LUE )
-olcAttributeTypes: {5}( 1.3.6.1.4.1.5923.1.1.1.6 NAME 'eduPersonPrincipalName'
-  DESC 'eduPerson per Internet2 and EDUCAUSE' EQUALITY caseIgnoreMatch SUBSTR
+olcAttributeTypes: {5}( 1.3.6.1.4.1.5923.1.1.1.6 NAME &apos;eduPersonPrincipalName&apos;
+  DESC &apos;eduPerson per Internet2 and EDUCAUSE&apos; EQUALITY caseIgnoreMatch SUBSTR
   caseIgnoreSubstringsMatch SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 SINGLE-VALUE )
-olcAttributeTypes: {6}( 1.3.6.1.4.1.5923.1.1.1.7 NAME 'eduPersonEntitlement' D
- ESC 'eduPerson per Internet2 and EDUCAUSE' EQUALITY caseExactMatch SYNTAX 1.3
+olcAttributeTypes: {6}( 1.3.6.1.4.1.5923.1.1.1.7 NAME &apos;eduPersonEntitlement&apos; D
+ ESC &apos;eduPerson per Internet2 and EDUCAUSE&apos; EQUALITY caseExactMatch SYNTAX 1.3
  .6.1.4.1.1466.115.121.1.15 )
-olcAttributeTypes: {7}( 1.3.6.1.4.1.5923.1.1.1.8 NAME 'eduPersonPrimaryOrgUnit
- DN' DESC 'eduPerson per Internet2 and EDUCAUSE' EQUALITY distinguishedNameMat
+olcAttributeTypes: {7}( 1.3.6.1.4.1.5923.1.1.1.8 NAME &apos;eduPersonPrimaryOrgUnit
+ DN&apos; DESC &apos;eduPerson per Internet2 and EDUCAUSE&apos; EQUALITY distinguishedNameMat
  ch SYNTAX 1.3.6.1.4.1.1466.115.121.1.12 SINGLE-VALUE )
-olcAttributeTypes: {8}( 1.3.6.1.4.1.5923.1.1.1.9 NAME 'eduPersonScopedAffiliat
- ion' DESC 'eduPerson per Internet2 and EDUCAUSE' EQUALITY caseIgnoreMatch SYN
+olcAttributeTypes: {8}( 1.3.6.1.4.1.5923.1.1.1.9 NAME &apos;eduPersonScopedAffiliat
+ ion&apos; DESC &apos;eduPerson per Internet2 and EDUCAUSE&apos; EQUALITY caseIgnoreMatch SYN
  TAX 1.3.6.1.4.1.1466.115.121.1.15 )
-olcAttributeTypes: {9}( 1.3.6.1.4.1.5923.1.1.1.10 NAME 'eduPersonTargetedID' D
- ESC 'eduPerson per Internet2 and EDUCAUSE' EQUALITY caseIgnoreMatch SYNTAX 1.
+olcAttributeTypes: {9}( 1.3.6.1.4.1.5923.1.1.1.10 NAME &apos;eduPersonTargetedID&apos; D
+ ESC &apos;eduPerson per Internet2 and EDUCAUSE&apos; EQUALITY caseIgnoreMatch SYNTAX 1.
  3.6.1.4.1.1466.115.121.1.15 )
-olcAttributeTypes: {10}( 1.3.6.1.4.1.5923.1.1.1.11 NAME 'eduPersonAssurance' D
- ESC 'eduPerson per Internet2 and EDUCAUSE' EQUALITY caseIgnoreMatch SYNTAX 1.
+olcAttributeTypes: {10}( 1.3.6.1.4.1.5923.1.1.1.11 NAME &apos;eduPersonAssurance&apos; D
+ ESC &apos;eduPerson per Internet2 and EDUCAUSE&apos; EQUALITY caseIgnoreMatch SYNTAX 1.
  3.6.1.4.1.1466.115.121.1.15 )
-olcAttributeTypes: {11}( 1.3.6.1.4.1.5923.1.1.1.12 NAME 'eduPersonPrincipalNam
- ePrior' DESC 'eduPersonPrincipalNamePrior per Internet2'  EQUALITY caseIgnore
- Match SYNTAX '1.3.6.1.4.1.1466.115.121.1.15' )
-olcAttributeTypes: {12}( 1.3.6.1.4.1.5923.1.1.1.13 NAME 'eduPersonUniqueId' DE
- SC 'eduPersonUniqueId per Internet2' EQUALITY caseIgnoreMatch SYNTAX '1.3.6.1
- .4.1.1466.115.121.1.15' )
-olcObjectClasses: {0}( 1.3.6.1.4.1.5923.1.1.2 NAME 'eduPerson' DESC 'eduPerson
-  per Internet2 and EDUCAUSE 201310' AUXILIARY MAY ( eduPersonAffiliation $ ed
+olcAttributeTypes: {11}( 1.3.6.1.4.1.5923.1.1.1.12 NAME &apos;eduPersonPrincipalNam
+ ePrior&apos; DESC &apos;eduPersonPrincipalNamePrior per Internet2&apos;  EQUALITY caseIgnore
+ Match SYNTAX &apos;1.3.6.1.4.1.1466.115.121.1.15&apos; )
+olcAttributeTypes: {12}( 1.3.6.1.4.1.5923.1.1.1.13 NAME &apos;eduPersonUniqueId&apos; DE
+ SC &apos;eduPersonUniqueId per Internet2&apos; EQUALITY caseIgnoreMatch SYNTAX &apos;1.3.6.1
+ .4.1.1466.115.121.1.15&apos; )
+olcObjectClasses: {0}( 1.3.6.1.4.1.5923.1.1.2 NAME &apos;eduPerson&apos; DESC &apos;eduPerson
+  per Internet2 and EDUCAUSE 201310&apos; AUXILIARY MAY ( eduPersonAffiliation $ ed
  uPersonNickname $ eduPersonOrgDN $ eduPersonOrgUnitDN $ eduPersonPrimaryAffil
  iation $ eduPersonPrincipalName $ eduPersonEntitlement $ eduPersonPrimaryOrgU
  nitDN $ eduPersonScopedAffiliation $ eduPersonTargetedID $ eduPersonAssurance

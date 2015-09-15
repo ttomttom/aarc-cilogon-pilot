@@ -1,9 +1,10 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <project>
   <actions/>
   <description>Top level job for deploying and configuring OA4MP Server</description>
   <keepDependencies>false</keepDependencies>
-  <properties/>
+  <properties>
+  </properties>
   <scm class="hudson.scm.NullSCM"/>
   <assignedNode>oa4mp-server</assignedNode>
   <canRoam>false</canRoam>

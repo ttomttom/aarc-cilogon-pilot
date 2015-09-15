@@ -1,10 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <project>
   <actions/>
-  <description/>
+  <description></description>
   <keepDependencies>false</keepDependencies>
-  <properties/>
-  <scm class="hudson.scm.NullSCM"/>
+  <properties>
   <assignedNode>oa4mp-client</assignedNode>
   <canRoam>false</canRoam>
   <disabled>false</disabled>
@@ -16,13 +15,13 @@
     <hudson.tasks.Shell>
       <command># restart service 
 
-sudo service tomcat6 stop || echo 'stopped?'
+sudo service tomcat6 stop || echo &apos;stopped?&apos;
 sleep 10
 sudo service tomcat6 start
 
 sleep 30
 
-sudo service httpd stop || echo 'stopped?'
+sudo service httpd stop || echo &apos;stopped?&apos;
 sleep 10
 sudo service httpd start
 </command>

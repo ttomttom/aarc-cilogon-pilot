@@ -1,9 +1,10 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <project>
   <actions/>
   <description>Set up environment for OA4MP client. This job simply calls either tomcat-ssl or tomcat-httpd</description>
   <keepDependencies>false</keepDependencies>
-  <properties/>
+  <properties>
+  </properties>
   <scm class="hudson.scm.NullSCM"/>
   <assignedNode>oa4mp-client</assignedNode>
   <canRoam>false</canRoam>

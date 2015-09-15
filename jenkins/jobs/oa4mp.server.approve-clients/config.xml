@@ -1,10 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <project>
   <actions/>
   <description>This tasks automatically approves every pending client request.</description>
   <keepDependencies>false</keepDependencies>
-  <properties/>
-  <scm class="hudson.scm.NullSCM"/>
+  <properties>
   <assignedNode>oa4mp-server</assignedNode>
   <canRoam>false</canRoam>
   <disabled>false</disabled>
@@ -18,20 +17,20 @@
     
      client_file=`basename ${client}`
 
-     if [ ! -f "${SERVER_STORE_DIR}/clientApprovals/dataPath/${client_file}" ]; then
+     if [ ! -f &quot;${SERVER_STORE_DIR}/clientApprovals/dataPath/${client_file}&quot; ]; then
      
-           TIMESTAMP="`date -u +%Y-%m-%dT%H:%M:%S.000Z`"
-           CLIENT_ID="`xmlstarlet sel -T -t -v "properties/entry[@key='client_id']" ${client}`"
+           TIMESTAMP=&quot;`date -u +%Y-%m-%dT%H:%M:%S.000Z`&quot;
+           CLIENT_ID=&quot;`xmlstarlet sel -T -t -v &quot;properties/entry[@key=&apos;client_id&apos;]&quot; ${client}`&quot;
 
-           sudo tee "${SERVER_STORE_DIR}/clientApprovals/dataPath/${client_file}" &lt;&lt;EOF
-&lt;?xml version="1.0" encoding="UTF-8" standalone="no"?&gt;
-&lt;!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd"&gt;
+           sudo tee &quot;${SERVER_STORE_DIR}/clientApprovals/dataPath/${client_file}&quot; &lt;&lt;EOF
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;no&quot;?&gt;
+&lt;!DOCTYPE properties SYSTEM &quot;http://java.sun.com/dtd/properties.dtd&quot;&gt;
 &lt;properties&gt;
 &lt;comment&gt;OA4MP stream store&lt;/comment&gt;
-&lt;entry key="approval_ts"&gt;${TIMESTAMP}&lt;/entry&gt;
-&lt;entry key="approver"&gt;admin&lt;/entry&gt;
-&lt;entry key="approved"&gt;true&lt;/entry&gt;
-&lt;entry key="client_id"&gt;${CLIENT_ID}&lt;/entry&gt;
+&lt;entry key=&quot;approval_ts&quot;&gt;${TIMESTAMP}&lt;/entry&gt;
+&lt;entry key=&quot;approver&quot;&gt;admin&lt;/entry&gt;
+&lt;entry key=&quot;approved&quot;&gt;true&lt;/entry&gt;
+&lt;entry key=&quot;client_id&quot;&gt;${CLIENT_ID}&lt;/entry&gt;
 &lt;/properties&gt;
 EOF
 

@@ -1,8 +1,8 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <project>
   <actions/>
-  <description>Creates a new root CA and archives it. This task is meant to be used for manually initializing a new certificate bundle. Calling this task will result in a certificate bundle with the newest timestamp, rendering every previously created certificate obsolete. Every previously created certificate is archived and can be retrieve later manually. Details of the type of certificate created can be tweaked within this project. It is advised to leave CA=rootCA, as other tasks have this value set as a fallback default.&#13;
-&#13;
+  <description>Creates a new root CA and archives it. This task is meant to be used for manually initializing a new certificate bundle. Calling this task will result in a certificate bundle with the newest timestamp, rendering every previously created certificate obsolete. Every previously created certificate is archived and can be retrieve later manually. Details of the type of certificate created can be tweaked within this project. It is advised to leave CA=rootCA, as other tasks have this value set as a fallback default.&#xd;
+&#xd;
 Limitations: Currently there is no updated mechanism implemented for updating CRLs, therefore certificates will expire at some point and they will need to be recreated.</description>
   <keepDependencies>false</keepDependencies>
   <properties>
@@ -11,22 +11,20 @@ Limitations: Currently there is no updated mechanism implemented for updating CR
         <string>certificates-master.*</string>
       </projectNameList>
     </hudson.plugins.copyartifact.CopyArtifactPermissionProperty>
-  </properties>
-  <scm class="hudson.scm.SubversionSCM" plugin="subversion@2.5.1">
     <locations>
       <hudson.scm.SubversionSCM_-ModuleLocation>
         <remote>http://ndpfsvn.nikhef.nl/ro/mwsec/trunk/mwsec-utils/certificate_tester</remote>
-        <credentialsId/>
+        <credentialsId></credentialsId>
         <local>.</local>
         <depthOption>infinity</depthOption>
         <ignoreExternalsOption>true</ignoreExternalsOption>
       </hudson.scm.SubversionSCM_-ModuleLocation>
     </locations>
-    <excludedRegions/>
-    <includedRegions/>
-    <excludedUsers/>
-    <excludedRevprop/>
-    <excludedCommitMessages/>
+    <excludedRegions></excludedRegions>
+    <includedRegions></includedRegions>
+    <excludedUsers></excludedUsers>
+    <excludedRevprop></excludedRevprop>
+    <excludedCommitMessages></excludedCommitMessages>
     <workspaceUpdater class="hudson.scm.subversion.UpdateUpdater"/>
     <ignoreDirPropChanges>false</ignoreDirPropChanges>
     <filterChangelog>false</filterChangelog>
@@ -49,26 +47,26 @@ BITS=2048</propertiesContent>
       </info>
     </EnvInjectBuilder>
     <hudson.tasks.Shell>
-      <command>echo "[[:: Setting defaults ::]]"
+      <command>echo &quot;[[:: Setting defaults ::]]&quot;
 ca_pass=test
-default_oid="1.2.840.113612.5.2.2.1"
+default_oid=&quot;1.2.840.113612.5.2.2.1&quot;
 CONFDIR=`pwd`
 TESTDIR=/tmp/cert_testdir
 CA=${CA:-rootCA}
 DAYS=${DAYS:-365}
-CRL_DAYS=${CRL_DAYS:-122}
+CRL_DAYS=${CRL_DAYS:-365}
 PATHLEN=${PATHLEN:-1}
 BITS=${BITS:-2048}
 
-echo "[[:: Deleting previous testdir ::]]"
+echo &quot;[[:: Deleting previous testdir ::]]&quot;
 rm -rf ${TESTDIR}
 
 pushd ${CONFDIR}
 source ./functions
-create_root_ca ca=rootCA cn="${CA}" bits="${BITS}" crldays="${CRL_DAYS}" days="${DAYS}" pathlen="${PATHLEN}"
+create_root_ca ca=rootCA cn=&quot;${CA}&quot; bits=&quot;${BITS}&quot; crldays=&quot;${CRL_DAYS}&quot; days=&quot;${DAYS}&quot; pathlen=&quot;${PATHLEN}&quot;
 popd
 
-echo "[[:: Archiving artifact ::]]"
+echo &quot;[[:: Archiving artifact ::]]&quot;
 
 tar czfp cert_testdir.tar.gz -C /tmp/ cert_testdir</command>
     </hudson.tasks.Shell>

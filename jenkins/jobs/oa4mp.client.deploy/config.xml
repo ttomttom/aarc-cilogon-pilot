@@ -1,24 +1,25 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <project>
   <actions/>
   <description>Dowloads the latest tagged version of oa4mp-client and copies the client2.war into the tomcat webapps container</description>
   <keepDependencies>false</keepDependencies>
-  <properties/>
+  <properties>
+  </properties>
   <scm class="hudson.scm.SubversionSCM" plugin="subversion@2.5.1">
     <locations>
       <hudson.scm.SubversionSCM_-ModuleLocation>
         <remote>http://svn.code.sf.net/p/cilogon/code/tags/latest/client</remote>
-        <credentialsId/>
+        <credentialsId></credentialsId>
         <local>.</local>
         <depthOption>infinity</depthOption>
         <ignoreExternalsOption>true</ignoreExternalsOption>
       </hudson.scm.SubversionSCM_-ModuleLocation>
     </locations>
-    <excludedRegions/>
-    <includedRegions/>
-    <excludedUsers/>
-    <excludedRevprop/>
-    <excludedCommitMessages/>
+    <excludedRegions></excludedRegions>
+    <includedRegions></includedRegions>
+    <excludedUsers></excludedUsers>
+    <excludedRevprop></excludedRevprop>
+    <excludedCommitMessages></excludedCommitMessages>
     <workspaceUpdater class="hudson.scm.subversion.UpdateUpdater"/>
     <ignoreDirPropChanges>false</ignoreDirPropChanges>
     <filterChangelog>false</filterChangelog>

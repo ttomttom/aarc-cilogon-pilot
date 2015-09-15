@@ -1,20 +1,19 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <project>
   <actions/>
-  <description>Configure oa4mp client with a simple setup using file storage as backend. Every relevant server information is kept under /usr/www/client. Since this client has to be registered at the oa4mp-server some of the required fields are left unconfigured: id and secret. These two fields are provided upon registration and have to be filled in at /usr/www/client/conf/cfg.xml&#13;
-&#13;
-Accepted options:&#13;
-&#13;
-CLIENT_DIR                             (required) &#13;
-CLIENT_CONF_DIR                  (required)&#13;
-CLIENT_CONF_FILE                 (required)&#13;
-CLIENT_STORE_DIR                (required)&#13;
-CLIENT_LOG_DIR                    (required)&#13;
-CLIENT_KEYSTORE_PASS      (required)&#13;
+  <description>Configure oa4mp client with a simple setup using file storage as backend. Every relevant server information is kept under /usr/www/client. Since this client has to be registered at the oa4mp-server some of the required fields are left unconfigured: id and secret. These two fields are provided upon registration and have to be filled in at /usr/www/client/conf/cfg.xml&#xd;
+&#xd;
+Accepted options:&#xd;
+&#xd;
+CLIENT_DIR                             (required) &#xd;
+CLIENT_CONF_DIR                  (required)&#xd;
+CLIENT_CONF_FILE                 (required)&#xd;
+CLIENT_STORE_DIR                (required)&#xd;
+CLIENT_LOG_DIR                    (required)&#xd;
+CLIENT_KEYSTORE_PASS      (required)&#xd;
 CLIENT_KEYSTORE                 (required)</description>
   <keepDependencies>false</keepDependencies>
-  <properties/>
-  <scm class="hudson.scm.NullSCM"/>
+  <properties>
   <assignedNode>oa4mp-client</assignedNode>
   <canRoam>false</canRoam>
   <disabled>false</disabled>
@@ -26,24 +25,24 @@ CLIENT_KEYSTORE                 (required)</description>
     <hudson.tasks.Shell>
       <command># Modify tomcats web.xml to reference the ouath2 client config files in a ContextParameter
 
-if [ -z "`xmlstarlet sel -T -N x="http://java.sun.com/xml/ns/javaee" \
-         -t -i x:web-app/x:context-param -o exists ${CATALINA_HOME}/conf/web.xml`" ]; then
+if [ -z &quot;`xmlstarlet sel -T -N x=&quot;http://java.sun.com/xml/ns/javaee&quot; \
+         -t -i x:web-app/x:context-param -o exists ${CATALINA_HOME}/conf/web.xml`&quot; ]; then
 
-        sudo xmlstarlet ed -L -N x="http://java.sun.com/xml/ns/javaee" -s /x:web-app -t elem -n file-context -v "" \
-                       -s //file-context -t elem -n param-name -v "oa4mp:oauth2.client.config.file" \
-                       -s //file-context -t elem -n param-value -v "${CLIENT_CONF_FILE}" \
+        sudo xmlstarlet ed -L -N x=&quot;http://java.sun.com/xml/ns/javaee&quot; -s /x:web-app -t elem -n file-context -v &quot;&quot; \
+                       -s //file-context -t elem -n param-name -v &quot;oa4mp:oauth2.client.config.file&quot; \
+                       -s //file-context -t elem -n param-value -v &quot;${CLIENT_CONF_FILE}&quot; \
                        -r //file-context -v context-param \
                        ${CATALINA_HOME}/conf/web.xml
 
 
-        sudo xmlstarlet ed -L -N x="http://java.sun.com/xml/ns/javaee" -s /x:web-app -t elem -n config-context -v "" \
-                       -s //config-context -t elem -n param-name -v "oa4mp:oauth2.client.config.name" \
-                       -s //config-context -t elem -n param-value -v "default" \
+        sudo xmlstarlet ed -L -N x=&quot;http://java.sun.com/xml/ns/javaee&quot; -s /x:web-app -t elem -n config-context -v &quot;&quot; \
+                       -s //config-context -t elem -n param-name -v &quot;oa4mp:oauth2.client.config.name&quot; \
+                       -s //config-context -t elem -n param-value -v &quot;default&quot; \
                        -r //config-context -v context-param \
                        ${CATALINA_HOME}/conf/web.xml
 
         # for some reason the formatting command exists with a non-zero return value, triggering failure
-        sudo xmlstarlet fo -t -o ${CATALINA_HOME}/conf/web.xml &gt; /tmp/web.xml || echo "formating xml"
+        sudo xmlstarlet fo -t -o ${CATALINA_HOME}/conf/web.xml &gt; /tmp/web.xml || echo &quot;formating xml&quot;
         sudo mv /tmp/web.xml ${CATALINA_HOME}/conf/web.xml
 fi</command>
     </hudson.tasks.Shell>
@@ -66,45 +65,45 @@ fi</command>
       <command># find out the real hostname form the certificate that the remote server provides 
 # it is important to get the hostname right (without missing domain) otherwise
 # SSL is going to break
-echo "nothing" &gt; nothing
-OA4MP_SERVER="`openssl s_client -ign_eof -CApath /etc/grid-security/certificates/ \
+echo &quot;nothing&quot; &gt; nothing
+OA4MP_SERVER=&quot;`openssl s_client -ign_eof -CApath /etc/grid-security/certificates/ \
                    -connect ${OA4MP_SERVER_HOST}:443 &lt; nothing 2&gt;/dev/null  \
-                   | grep -A 1 '^Certificate chain$' | tail -n 1 | sed 's/.*CN=\(.*\)/\1/'`"       
+                   | grep -A 1 &apos;^Certificate chain$&apos; | tail -n 1 | sed &apos;s/.*CN=\(.*\)/\1/&apos;`&quot;       
 
 
 # recreate client configuration 
-sudo rm -rf "${CLIENT_DIR}"
+sudo rm -rf &quot;${CLIENT_DIR}&quot;
 
-sudo mkdir -p "${CLIENT_CONF_DIR}"
-sudo mkdir -p "${CLIENT_STORE_DIR}"
-sudo mkdir -p "${CLIENT_LOG_DIR}"
+sudo mkdir -p &quot;${CLIENT_CONF_DIR}&quot;
+sudo mkdir -p &quot;${CLIENT_STORE_DIR}&quot;
+sudo mkdir -p &quot;${CLIENT_LOG_DIR}&quot;
 
 # create trust store including certificates from /etc/grid-security/certificates/
 for cert in /etc/grid-security/certificates/*.pem; do
         echo Importing ... $cert
         sudo keytool -importcert -noprompt -trustcacerts -file ${cert} \
-                -alias "${cert}" -keystore ${CLIENT_KEYSTORE} \
+                -alias &quot;${cert}&quot; -keystore ${CLIENT_KEYSTORE} \
                 -storepass ${CLIENT_KEYSTORE_PASS}
 done
 
 sudo chmod 400 ${CLIENT_KEYSTORE}
 
-sudo rm -rf "${CLIENT_CONF_FILE}"
-sudo tee "${CLIENT_CONF_FILE}" &lt;&lt;EOF
+sudo rm -rf &quot;${CLIENT_CONF_FILE}&quot;
+sudo tee &quot;${CLIENT_CONF_FILE}&quot; &lt;&lt;EOF
 &lt;config&gt;
 
-    &lt;client name="default" alias="client-config"/&gt;
+    &lt;client name=&quot;default&quot; alias=&quot;client-config&quot;/&gt;
 
     &lt;!-- ############################################################################## --&gt;
 
-    &lt;client name="client-config" address="https://${HOSTNAME}/client2"&gt;
+    &lt;client name=&quot;client-config&quot; address=&quot;https://${HOSTNAME}/client2&quot;&gt;
 
            &lt;logging
-                     logFileName="${CLIENT_LOG_DIR}/oa2-client.log"
-                     logName="oa2-client"
-                     logSize="1000000"
-                     logFileCount="2"
-                     debug="true"/&gt;
+                     logFileName=&quot;${CLIENT_LOG_DIR}/oa2-client.log&quot;
+                     logName=&quot;oa2-client&quot;
+                     logSize=&quot;1000000&quot;
+                     logFileCount=&quot;2&quot;
+                     debug=&quot;true&quot;/&gt;
 
            &lt;callbackUri&gt;https://${HOSTNAME}/client2/ready&lt;/callbackUri&gt;
 
@@ -114,16 +113,16 @@ sudo tee "${CLIENT_CONF_FILE}" &lt;&lt;EOF
            &lt;secret&gt;FILLTHIS&lt;/secret&gt;
 
 
-           &lt;fileStore path="${CLIENT_STORE_DIR}"&gt;
+           &lt;fileStore path=&quot;${CLIENT_STORE_DIR}&quot;&gt;
                       &lt;assetStore/&gt;
            &lt;/fileStore&gt;
 
            &lt;showRedirectPage&gt;true&lt;/showRedirectPage&gt;
 
-           &lt;keystore path="${CLIENT_KEYSTORE}"
-                     type="jks"
-                     password="changeit"
-                     factory="SunX509" /&gt;
+           &lt;keystore path=&quot;${CLIENT_KEYSTORE}&quot;
+                     type=&quot;jks&quot;
+                     password=&quot;changeit&quot;
+                     factory=&quot;SunX509&quot; /&gt;
            
     &lt;/client&gt;
 
@@ -131,7 +130,7 @@ sudo tee "${CLIENT_CONF_FILE}" &lt;&lt;EOF
 &lt;/config&gt;
 EOF
 
-sudo chown -R tomcat:tomcat "${CLIENT_DIR}"</command>
+sudo chown -R tomcat:tomcat &quot;${CLIENT_DIR}&quot;</command>
     </hudson.tasks.Shell>
   </builders>
   <publishers/>

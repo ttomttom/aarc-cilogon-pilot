@@ -1,14 +1,13 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <project>
   <actions/>
-  <description>Parent task that sets up myproxy &#13;
-&#13;
-Flow:&#13;
-- calls myproxy-server.simple-ca&#13;
+  <description>Parent task that sets up myproxy &#xd;
+&#xd;
+Flow:&#xd;
+- calls myproxy-server.simple-ca&#xd;
 - restarts myproxy-server</description>
   <keepDependencies>false</keepDependencies>
-  <properties/>
-  <scm class="hudson.scm.NullSCM"/>
+  <properties>
   <assignedNode>myproxy-server</assignedNode>
   <canRoam>false</canRoam>
   <disabled>false</disabled>
