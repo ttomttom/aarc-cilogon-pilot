@@ -9,6 +9,7 @@ CATALINA_HOME="/usr/share/tomcat6"
 # General config and utils                                                           #
 ######################################################################################
 
+yum -y install epel-release
 yum -y install xmlstarlet wget
 
 # includes /usr/sbin in non-login shells
