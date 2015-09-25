@@ -10,15 +10,16 @@ set -x
 yum -y install man wget vim
 
 # installing java 8
-if [ -z "`which java 2> /dev/null`" ]; then
-    JAVA_HOME="/usr/java/default"
-    wget -q --no-cookies --no-check-certificate \
-        --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F;   \
-        oraclelicense=accept-securebackup-cookie" \
-        "http://download.oracle.com/otn-pub/java/jdk/8u45-b14/jdk-8u45-linux-x64.rpm"
-    rpm -iv jdk-8u45-linux-x64.rpm
-    echo "export JAVA_HOME=${JAVA_HOME}" >> /etc/bashrc
-    echo 'export PATH=${JAVA_HOME}/bin:${PATH}' >> /etc/bashrc
+JAVA_LINK=`curl -s http://www.java.com/en/download/linux_manual.jsp 2>/dev/null | grep -m 1 'Linux x64 RPM'| cut -d '"' -f 4`
+
+if [ -n $JAVA_LINK ]; then
+        wget -q -O sun-java.rpm ${JAVA_LINK}
+        rpm -iv sun-java.rpm
+        echo "export JAVA_HOME=${JAVA_HOME}" >> /etc/bashrc
+        echo 'export PATH=${JAVA_HOME}/bin:${PATH}' >> /etc/bashrc
+else
+        echo "Could not find the right JAVA_LINK"
+        exit 1;
 fi
 
 ######################################################################################

@@ -14,9 +14,6 @@ yum -y install xmlstarlet wget
 # includes /usr/sbin in non-login shells
 echo '. /etc/profile' >> /home/jenkins/.bashrc
 
-#make sure domainname is set
-domainname demo
-hostname `hostname -s`.demo
 
 ######################################################################################
 # Dependencies  (java + tomcat + httpd + shibboleth)                                 #

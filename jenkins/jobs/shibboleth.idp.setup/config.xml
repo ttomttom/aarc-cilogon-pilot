@@ -43,7 +43,7 @@ cat &gt; &quot;${SHIB_INSTALL_PROPERTIES}&quot; &lt;&lt;EOF
 idp.sealer.storePassword= ${SHIB_SEALER_STOREPWD}
 idp.sealer.keyPassword= ${SHIB_SEALER_KEYPWD}
 idp.entityID= https://`hostname`/idp/shibboleth
-idp.scope= `domainname`
+idp.scope= `dnsdomainname`
 EOF
 
 # install shibboleth
@@ -53,7 +53,7 @@ if [ -z &quot;`ls -A ${SHIB_INSTALL_DIR}`&quot; ]; then
      	                  -Didp.target.dir=&quot;${SHIB_INSTALL_DIR}&quot; \
      	                  -Didp.merge.properties=&quot;${SHIB_INSTALL_PROPERTIES}&quot; \
      	                  -Didp.host.name=`hostname` \
-     	                  -Didp.scope=`domainname` \
+     	                  -Didp.scope=`dnsdomainname` \
      	                  -Didp.sealer.password=&quot;${SHIB_SEALER_PWD}&quot; \
      	                  -Didp.keystore.password=&quot;${SHIB_KEYSTORE_PWD}&quot;
 	popd
