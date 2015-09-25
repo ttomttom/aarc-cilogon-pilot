@@ -13,6 +13,8 @@ TOMCAT_KS_PASS          (optional)    changeit&#xd;
 TOMCAT_KS_FILE            (optional)    /etc/grid-security/tomcat-keystore</description>
   <keepDependencies>false</keepDependencies>
   <properties>
+  </properties>
+  <scm class="hudson.scm.NullSCM"/>
   <assignedNode>idp</assignedNode>
   <canRoam>false</canRoam>
   <disabled>false</disabled>

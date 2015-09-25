@@ -4,6 +4,8 @@
   <description></description>
   <keepDependencies>false</keepDependencies>
   <properties>
+  </properties>
+  <scm class="hudson.scm.NullSCM"/>
   <assignedNode>sp</assignedNode>
   <canRoam>false</canRoam>
   <disabled>false</disabled>

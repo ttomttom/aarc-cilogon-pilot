@@ -14,6 +14,8 @@ CLIENT_KEYSTORE_PASS      (required)&#xd;
 CLIENT_KEYSTORE                 (required)</description>
   <keepDependencies>false</keepDependencies>
   <properties>
+  </properties>
+  <scm class="hudson.scm.NullSCM"/>
   <assignedNode>oa4mp-client</assignedNode>
   <canRoam>false</canRoam>
   <disabled>false</disabled>

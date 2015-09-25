@@ -9,7 +9,8 @@ TARGET_HOST=$NODE_NAME        (required)         The hostname of the parent task
 &#xd;
 Download the latest archived certificate bundle and copies the certificates directory to /etc/grid-security in the TARGET_HOST. The previous /etc/grid-security/certificates is deleted to avoid confusion.</description>
   <keepDependencies>false</keepDependencies>
-  <properties/>
+  <properties>
+  </properties>
   <scm class="hudson.scm.NullSCM"/>
   <assignedNode>master</assignedNode>
   <canRoam>false</canRoam>
@@ -72,6 +73,29 @@ fi
 NEWEST=`ls -t1 artifacts | head -n 1`
 rm -rf ${TESTDIR}
 tar xzf artifacts/${NEWEST} -C /tmp/
+
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# creating signing policies. this bit should be moved later on into the certificate creating functions 
+
+CERTIFICATES=${TESTDIR}/certificates
+
+for ca in `find &quot;${CERTIFICATES}&quot; -type f -name *.pem`; do
+        hash=`openssl x509 -in &quot;${ca}&quot; -subject_hash -noout`
+        hash_old=`openssl x509 -in &quot;${ca}&quot; -subject_hash_old -noout`
+        subject=`openssl x509 -in &quot;${ca}&quot; -subject -noout | sed s/^subject=\ //`
+        cond_subjects=`echo &quot;${subject}&quot; | sed s/CN=.*/\*/`
+
+        cat &gt; &quot;${CERTIFICATES}/${hash}.signing_policy&quot; &lt;&lt;EOF
+access_id_CA      X509     &apos;${subject}&apos;
+pos_rights        globus   CA:sign
+cond_subjects     globus   &apos;&quot;${cond_subjects}&quot;&apos;
+EOF
+        ln -f -s &quot;${hash}.signing_policy&quot; &quot;${CERTIFICATES}/${hash_old}.signing_policy&quot;
+done
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 
 echo &quot;[[:: Copying lates certificates directory ::]]&quot;
 

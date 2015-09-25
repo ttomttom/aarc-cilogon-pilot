@@ -4,6 +4,8 @@
   <description>Configure tomcat as a standalone container serving https through port 8443</description>
   <keepDependencies>false</keepDependencies>
   <properties>
+  </properties>
+  <scm class="hudson.scm.NullSCM"/>
   <assignedNode>oa4mp-server||oa4mp-client</assignedNode>
   <canRoam>false</canRoam>
   <disabled>false</disabled>

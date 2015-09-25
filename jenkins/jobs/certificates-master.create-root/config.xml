@@ -11,6 +11,8 @@ Limitations: Currently there is no updated mechanism implemented for updating CR
         <string>certificates-master.*</string>
       </projectNameList>
     </hudson.plugins.copyartifact.CopyArtifactPermissionProperty>
+  </properties>
+  <scm class="hudson.scm.SubversionSCM" plugin="subversion@2.5.1">
     <locations>
       <hudson.scm.SubversionSCM_-ModuleLocation>
         <remote>http://ndpfsvn.nikhef.nl/ro/mwsec/trunk/mwsec-utils/certificate_tester</remote>

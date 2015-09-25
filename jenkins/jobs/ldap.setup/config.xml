@@ -13,6 +13,8 @@ LDAP_SEARCH_BASE_DN      (optional)    ou=people,dc=my-domain,dc=com&#xd;
 LDAP_BIND_DN                       (optional)    cn=Manager,dc=my-domain,dc=com</description>
   <keepDependencies>false</keepDependencies>
   <properties>
+  </properties>
+  <scm class="hudson.scm.NullSCM"/>
   <assignedNode>ldap-server</assignedNode>
   <canRoam>false</canRoam>
   <disabled>false</disabled>

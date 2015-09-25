@@ -11,6 +11,8 @@ DUMMY_PASSWORD              (optional)    dummy&#xd;
 DUMMY_USERNAME               (optional)    dummy</description>
   <keepDependencies>false</keepDependencies>
   <properties>
+  </properties>
+  <scm class="hudson.scm.NullSCM"/>
   <assignedNode>ldap-server</assignedNode>
   <canRoam>false</canRoam>
   <disabled>false</disabled>
