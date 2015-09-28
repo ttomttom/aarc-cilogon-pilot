@@ -1,0 +1,14 @@
+This is a list of observations that you will have to do manually in case you're setting up a new
+Jenkins environment for the puprose of running these jobs.
+
+ - EnvFile plugin is not working as expected in my experience, thus you'll have to change a couple
+   of job config.xml files which are trying to use this plugin. We will move away from using this
+   plugin and implement a different solution soon
+
+ - iptable rules! need to open port 443 for the web services. 
+
+ - the Scripler plugin provides the functionality to execute stored groovy scripts. These usage of
+   these groovy scripts are configured in the job config.xmls, but for some reason the name of the
+   called groovy script is not picket up by jenkins when importing a job config.xml for the first 
+   time. The solution is to go and configure the job from the UI to use a specific groovy script
+   (find-host-by-label)

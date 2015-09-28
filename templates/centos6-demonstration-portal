@@ -15,6 +15,11 @@ yum -y install xmlstarlet wget
 # includes /usr/sbin in non-login shells
 echo '. /etc/profile' >> /home/jenkins/.bashrc
 
+# open port 443 for web service
+REJECT_RULE=`iptables -nL INPUT --line-numbers | grep REJECT | cut -d ' '  -f 1`
+iptables -I INPUT ${REJECT_RULE} -m state --state NEW -m tcp -p tcp --dport 443 -j ACCEPT
+iptables-save > /etc/sysconfig/iptables
+service iptables restart
 
 ######################################################################################
 # Dependencies  (java + tomcat + httpd + shibboleth)                                 #
