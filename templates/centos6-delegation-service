@@ -18,6 +18,7 @@ echo '. /etc/profile' >> /home/jenkins/.bashrc
 # tweak hostname to include domainname
 hostname `hostname -s`.`dnsdomainname`
 echo `hostname` > /etc/hostname
+sed -i "s/^HOSTNAME=.*/HOSTNAME=`hostname`/" /etc/sysconfig/network
 
 # open port 443 for web service
 REJECT_RULE=`iptables -nL INPUT --line-numbers | grep REJECT | cut -d ' '  -f 1`
