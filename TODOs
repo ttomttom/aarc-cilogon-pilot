@@ -12,3 +12,12 @@ Jenkins environment for the puprose of running these jobs.
    called groovy script is not picket up by jenkins when importing a job config.xml for the first 
    time. The solution is to go and configure the job from the UI to use a specific groovy script
    (find-host-by-label)
+
+ - you should run a template configuration before the install-slave script. In case you did it the
+   other way around, make sure to restart the Jenkins Slave Agent by disconnecting and reconncting
+   to the slave machine through the UI. This will make sure to reload all the Env variables set by
+   the template configuration.
+
+ - the *.deploy jenkins jobs are configured to download the latest version of OA4MP server and client
+   but currently there seems to be a problem with version 3.2 (client gets a null pointer exception
+   upon creating the user private key). The previous vesion (3.1.2) should work.
